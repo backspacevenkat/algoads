@@ -260,8 +260,34 @@ interface WritableCookieStore extends CookieStoreLike {
   delete(name: string): void;
 }
 
-function isWritable(store: CookieStoreLike): store is WritableCookieStore {
-  return typeof (store as WritableCookieStore).set === "function";
+/**
+ * Next.js 16 makes `cookies()` in Server Components return an object that
+ * LOOKS writable (it has a `.set` method) but throws at runtime if you try
+ * to use it. Only Server Actions, Route Handlers, and proxies can actually
+ * write cookies.
+ *
+ * We can't detect the caller context cheaply, so we attempt the write and
+ * silently swallow the specific "Cookies can only be modified..." error.
+ * The refreshed access token is still returned to the current request — it
+ * just won't persist to cookies from a server component. The next request
+ * from the same browser will re-run the refresh path, which is one extra
+ * InsForge call per page load on expired sessions — acceptable.
+ */
+function safeSet(
+  store: Partial<WritableCookieStore>,
+  name: string,
+  value: string,
+  options?: Record<string, unknown>,
+): void {
+  if (typeof store.set !== "function") return;
+  try {
+    store.set(name, value, options);
+  } catch (e) {
+    // Next.js throws a specific error when cookies() is used in a Server
+    // Component context. We tolerate it silently; any other error re-throws.
+    const msg = e instanceof Error ? e.message : "";
+    if (!msg.includes("Cookies can only be modified")) throw e;
+  }
 }
 
 /**
@@ -269,7 +295,7 @@ function isWritable(store: CookieStoreLike): store is WritableCookieStore {
  * successful signUp / signInWithPassword / refreshSession.
  */
 export function setSessionCookies(
-  store: WritableCookieStore,
+  store: Partial<WritableCookieStore>,
   session: { accessToken: string; refreshToken: string },
 ): void {
   const secure = process.env.NODE_ENV === "production";
@@ -279,20 +305,20 @@ export function setSessionCookies(
     sameSite: "lax" as const,
     path: "/",
   };
-  store.set(ACCESS_COOKIE, session.accessToken, {
+  safeSet(store, ACCESS_COOKIE, session.accessToken, {
     ...common,
     maxAge: ACCESS_MAX_AGE,
   });
-  store.set(REFRESH_COOKIE, session.refreshToken, {
+  safeSet(store, REFRESH_COOKIE, session.refreshToken, {
     ...common,
     maxAge: REFRESH_MAX_AGE,
   });
 }
 
 /** Clear session cookies (logout). */
-export function clearSessionCookies(store: WritableCookieStore): void {
-  store.set(ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
-  store.set(REFRESH_COOKIE, "", { path: "/", maxAge: 0 });
+export function clearSessionCookies(store: Partial<WritableCookieStore>): void {
+  safeSet(store, ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
+  safeSet(store, REFRESH_COOKIE, "", { path: "/", maxAge: 0 });
 }
 
 /**
@@ -321,19 +347,18 @@ export async function getSessionUser(): Promise<{
     if (user) return { user, accessToken: access };
   }
 
-  // Slow path: try refresh
+  // Slow path: try refresh. safeSet() silently no-ops in Server Component
+  // contexts where cookie writes aren't allowed — we still return the
+  // freshly-refreshed user for THIS request, and the next request will
+  // re-refresh. Route handlers + proxies will persist the cookies normally.
   if (refresh) {
     try {
       const refreshed = await refreshSession(refresh);
-      if (isWritable(store)) {
-        setSessionCookies(store, refreshed);
-      }
+      setSessionCookies(store, refreshed);
       return { user: refreshed.user, accessToken: refreshed.accessToken };
     } catch {
       // refresh failed, treat as logged out
-      if (isWritable(store)) {
-        clearSessionCookies(store);
-      }
+      clearSessionCookies(store);
     }
   }
 
