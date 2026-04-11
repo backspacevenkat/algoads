@@ -35,16 +35,16 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
             <XAxis
               dataKey="dateShort"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(0,0,0,0.55)"
               fontSize={11}
               tickLine={false}
             />
             <YAxis
               yAxisId="left"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(0,0,0,0.55)"
               fontSize={11}
               tickLine={false}
               axisLine={false}
@@ -52,26 +52,27 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
             <YAxis
               yAxisId="right"
               orientation="right"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(0,0,0,0.55)"
               fontSize={11}
               tickLine={false}
               axisLine={false}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(20,20,20,0.95)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "6px",
+                backgroundColor: "rgba(255,255,255,0.98)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                 fontSize: "12px",
               }}
-              labelStyle={{ color: "rgba(255,255,255,0.9)" }}
+              labelStyle={{ color: "rgba(0,0,0,0.9)", fontWeight: 600 }}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} />
             <Line
               yAxisId="left"
               type="monotone"
               dataKey="impressions"
-              stroke="#60a5fa"
+              stroke="#0891b2"
               strokeWidth={2}
               dot={false}
               name="Impressions"
@@ -80,7 +81,7 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
               yAxisId="left"
               type="monotone"
               dataKey="clicks"
-              stroke="#34d399"
+              stroke="#059669"
               strokeWidth={2}
               dot={false}
               name="Clicks"
@@ -89,7 +90,7 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
               yAxisId="right"
               type="monotone"
               dataKey="costUsd"
-              stroke="#fbbf24"
+              stroke="#d97706"
               strokeWidth={2}
               dot={false}
               name="Cost ($)"
@@ -101,15 +102,15 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.08)" />
             <XAxis
               dataKey="dateShort"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(0,0,0,0.55)"
               fontSize={11}
               tickLine={false}
             />
             <YAxis
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(0,0,0,0.55)"
               fontSize={11}
               tickLine={false}
               axisLine={false}
@@ -117,9 +118,10 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "rgba(20,20,20,0.95)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: "6px",
+                backgroundColor: "rgba(255,255,255,0.98)",
+                border: "1px solid rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                 fontSize: "12px",
               }}
               formatter={(value: number) => [`${value.toFixed(2)}%`, "CTR"]}
@@ -127,7 +129,7 @@ export function MetricsChart({ rows }: { rows: DailyRow[] }) {
             <Line
               type="monotone"
               dataKey="ctrPct"
-              stroke="#f472b6"
+              stroke="#db2777"
               strokeWidth={2}
               dot={false}
               name="CTR"

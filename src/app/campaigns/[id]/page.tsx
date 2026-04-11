@@ -77,22 +77,22 @@ export default async function CampaignDetailPage({
 
       {data.diagnostic && (
         <>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {data.diagnostic.campaign.name}
               </h1>
-              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
                 <span className="font-mono">{data.diagnostic.campaign.id}</span>
-                <span>•</span>
+                <span>·</span>
                 <Badge variant="secondary">
                   {data.diagnostic.campaign.advertisingChannelType}
                 </Badge>
                 <Badge
                   className={
                     data.diagnostic.campaign.status === "ENABLED"
-                      ? "bg-emerald-600/20 text-emerald-500 border border-emerald-600/30"
-                      : "bg-amber-600/20 text-amber-400 border border-amber-600/30"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium"
+                      : "bg-amber-50 text-amber-700 border border-amber-200 font-medium"
                   }
                 >
                   {data.diagnostic.campaign.status}
@@ -182,8 +182,8 @@ export default async function CampaignDetailPage({
                       <Badge
                         className={
                           ad.approvalStatus === "APPROVED"
-                            ? "bg-emerald-600/20 text-emerald-500 border border-emerald-600/30 text-xs"
-                            : "bg-amber-600/20 text-amber-400 border border-amber-600/30 text-xs"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium"
+                            : "bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium"
                         }
                       >
                         {ad.approvalStatus}

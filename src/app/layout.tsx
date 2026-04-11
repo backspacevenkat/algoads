@@ -6,11 +6,13 @@ import { SiteHeader } from "@/components/site-header";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,11 +39,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SiteHeader />
-        <main className="flex-1 mx-auto max-w-6xl w-full px-6 py-8">
+        <main className="flex-1 mx-auto max-w-5xl w-full px-6 py-10 sm:py-14">
           {children}
         </main>
       </body>

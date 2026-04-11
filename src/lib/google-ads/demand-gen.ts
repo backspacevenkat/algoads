@@ -39,6 +39,46 @@ function formatDateTime(d: Date): string {
 }
 
 /**
+ * Extract a human-readable summary from a GoogleAdsApiError.
+ * Google's error bodies nest the useful info under .details[0].errors[n]
+ * with errorCode + message + trigger + location. We build a one-line
+ * summary so callers can surface it in UI / logs instead of a generic
+ * "API error 400".
+ */
+function summarizeGoogleAdsError(e: unknown): string {
+  if (!(e instanceof GoogleAdsApiError)) {
+    return e instanceof Error ? e.message : String(e);
+  }
+  try {
+    const body = e.body as {
+      error?: {
+        details?: Array<{
+          errors?: Array<{
+            errorCode?: Record<string, string>;
+            message?: string;
+            location?: { fieldPathElements?: Array<{ fieldName?: string }> };
+          }>;
+        }>;
+      };
+    };
+    const errors = body?.error?.details?.[0]?.errors ?? [];
+    if (errors.length === 0) return e.message;
+    const parts = errors.map((err) => {
+      const code = Object.values(err.errorCode ?? {})[0] ?? "UNKNOWN";
+      const field = (err.location?.fieldPathElements ?? [])
+        .map((f) => f.fieldName)
+        .filter(Boolean)
+        .join(".");
+      const msg = err.message ?? "";
+      return field ? `${code} at ${field}: ${msg}` : `${code}: ${msg}`;
+    });
+    return parts.join("; ");
+  } catch {
+    return e.message;
+  }
+}
+
+/**
  * Rollback partial state on failure. Deletes the budget (which will cascade-
  * disable dependent campaigns, though they stay around as REMOVED).
  */
@@ -103,7 +143,12 @@ export async function createDemandGenCampaign(
   const budgetRn = budgetResp.results[0].resourceName;
 
   // ─── STEP 2: Campaign (PAUSED) ───────────────────────────────────
+  // v23 requires startDateTime to be 00:00:00 (start of day) and
+  // endDateTime to be 23:59:59 (end of day). Using any other time
+  // produces DATE_RANGE_ERROR_START_TIME_MUST_BE_THE_START_OF_A_DAY or
+  // DATE_RANGE_ERROR_END_TIME_MUST_BE_THE_END_OF_A_DAY.
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
   const endDt = new Date(now);
   endDt.setDate(endDt.getDate() + input.durationDays);
   endDt.setHours(23, 59, 59, 0);
@@ -136,7 +181,11 @@ export async function createDemandGenCampaign(
     );
     campaignRn = campResp.results[0].resourceName;
   } catch (e) {
-    await rollback(creds, budgetRn, `campaign create: ${(e as Error).message}`);
+    // Capture the full Google Ads error body (including trigger + field path)
+    // so the caller can surface the actual root cause instead of a generic
+    // "API error 400" message.
+    const detail = summarizeGoogleAdsError(e);
+    await rollback(creds, budgetRn, `campaign create: ${detail}`);
     throw e; // unreachable, satisfies TS
   }
   const campaignId = campaignRn.split("/").pop()!;
@@ -168,7 +217,7 @@ export async function createDemandGenCampaign(
     );
     agRn = agResp.results[0].resourceName;
   } catch (e) {
-    await rollback(creds, budgetRn, `ad group create: ${(e as Error).message}`);
+    await rollback(creds, budgetRn, `ad group create: ${summarizeGoogleAdsError(e)}`);
     throw e;
   }
 
@@ -244,7 +293,7 @@ export async function createDemandGenCampaign(
     );
     logoAssetRn = logoResp.results[0].resourceName;
   } catch (e) {
-    await rollback(creds, budgetRn, `asset upload: ${(e as Error).message}`);
+    await rollback(creds, budgetRn, `asset upload: ${summarizeGoogleAdsError(e)}`);
     throw e;
   }
 
@@ -288,7 +337,7 @@ export async function createDemandGenCampaign(
     // finish in the UI. Surface the error so the caller knows.
     if (e instanceof GoogleAdsApiError) {
       throw new Error(
-        `Ad creation failed (campaign ${campaignId} exists, complete in UI): ${JSON.stringify(e.body).slice(0, 500)}`,
+        `Ad creation failed (campaign ${campaignId} exists, complete in UI): ${summarizeGoogleAdsError(e)}`,
       );
     }
     throw e;

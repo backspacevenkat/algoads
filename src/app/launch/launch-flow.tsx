@@ -352,7 +352,7 @@ export function LaunchFlow() {
     return (
       <Card>
         <CardContent className="py-12 text-center space-y-4">
-          <div className="inline-flex items-center justify-center size-16 rounded-full bg-emerald-600/20 text-emerald-500">
+          <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200">
             <Rocket className="size-8" />
           </div>
           <div>

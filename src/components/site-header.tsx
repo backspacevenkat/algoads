@@ -18,20 +18,20 @@ export function SiteHeader() {
     pathname.startsWith("/campaigns") || pathname.startsWith("/launch");
 
   return (
-    <header className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+    <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
+      <div className="mx-auto max-w-5xl px-6 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-3 text-base font-semibold tracking-tight"
+          className="flex items-center gap-2.5 text-base font-semibold tracking-tight"
         >
           <Image
             src="/logo-icon.png"
             alt=""
-            width={32}
-            height={32}
+            width={28}
+            height={28}
             className="rounded-md"
           />
-          <span className="font-mono">algo_thinker</span>
+          <span className="font-mono tracking-tight">algo_thinker</span>
         </Link>
 
         {isAdmin ? (
