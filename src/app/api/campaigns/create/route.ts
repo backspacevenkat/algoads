@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createDemandGenCampaign } from "@/lib/google-ads/demand-gen";
 import type { CreateDemandGenInput } from "@/lib/google-ads/types";
-import { INDIA_TECH_CITIES, LANG_ENGLISH } from "@/lib/google-ads/geos";
+import { GLOBAL_SOUTH_TECH_COUNTRIES, LANG_ENGLISH } from "@/lib/google-ads/geos";
 import {
   getAuthContext,
   unauthorizedResponse,
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
 
     const input: CreateDemandGenInput = {
       ...parsed.data,
-      locations: parsed.data.locations ?? INDIA_TECH_CITIES,
+      locations: parsed.data.locations ?? GLOBAL_SOUTH_TECH_COUNTRIES,
       languages: parsed.data.languages ?? [LANG_ENGLISH],
     };
 
