@@ -55,7 +55,7 @@ export default async function CampaignDetailPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/"
+        href="/campaigns"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="size-4" />

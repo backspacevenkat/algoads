@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteHeader } from "@/components/site-header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AlgoAds — Retention-safe YouTube ad launcher",
+  title: {
+    default: "Algo Thinker — Documentaries on AI & Autonomous Systems",
+    template: "%s — Algo Thinker",
+  },
   description:
-    "Launch and monitor retention-safe Google Ads Demand Gen campaigns for your YouTube videos.",
+    "Long-form documentaries about AI, autonomous systems, and the engineering behind the technologies redefining modern life.",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -29,21 +40,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <header className="border-b border-border">
-          <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-            <a href="/" className="text-lg font-semibold tracking-tight">
-              AlgoAds
-            </a>
-            <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-              <a href="/" className="hover:text-foreground transition-colors">
-                Dashboard
-              </a>
-              <a href="/launch" className="hover:text-foreground transition-colors">
-                Launch
-              </a>
-            </nav>
-          </div>
-        </header>
+        <SiteHeader />
         <main className="flex-1 mx-auto max-w-6xl w-full px-6 py-8">
           {children}
         </main>
