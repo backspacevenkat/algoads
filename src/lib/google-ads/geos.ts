@@ -7,6 +7,7 @@
  */
 
 import { gaql } from "./client";
+import type { GoogleAdsCredentials } from "./client";
 import type { GeoTarget } from "./types";
 
 /**
@@ -41,13 +42,19 @@ export const LANG_ENGLISH = "1000";
  * Look up a geo target constant by name. Returns the first matching ENABLED
  * result. Use this when adding a city that isn't in the hardcoded list.
  */
-export async function findGeoId(cityName: string, countryCode?: string): Promise<GeoTarget | null> {
+export async function findGeoId(
+  creds: GoogleAdsCredentials,
+  cityName: string,
+  countryCode?: string,
+): Promise<GeoTarget | null> {
   const countryFilter = countryCode
     ? `AND geo_target_constant.country_code = '${countryCode}'`
     : "";
   const rows = await gaql<{
     geoTargetConstant: { id: string; name: string; targetType: string; status: string };
-  }>(`
+  }>(
+    creds,
+    `
     SELECT geo_target_constant.id, geo_target_constant.name,
            geo_target_constant.country_code, geo_target_constant.target_type,
            geo_target_constant.status
@@ -56,7 +63,8 @@ export async function findGeoId(cityName: string, countryCode?: string): Promise
       AND geo_target_constant.status = 'ENABLED'
       ${countryFilter}
     LIMIT 1
-  `);
+  `,
+  );
 
   if (rows.length === 0) return null;
   const g = rows[0].geoTargetConstant;

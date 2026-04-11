@@ -8,7 +8,8 @@
  *   - metrics.average_cpv → metrics.trueview_average_cpv
  *   - metrics.video_view_rate → metrics.video_trueview_view_rate
  */
-import { apiCall, gaql, getEnv } from "./client";
+import { apiCall, gaql } from "./client";
+import type { GoogleAdsCredentials } from "./client";
 import type { CampaignRow, MetricsRow } from "./types";
 
 type CampaignGaqlRow = {
@@ -46,8 +47,12 @@ type MetricsGaqlRow = {
  * List all non-removed campaigns in the configured customer account.
  * Used by the dashboard home page.
  */
-export async function listCampaigns(): Promise<CampaignRow[]> {
-  const rows = await gaql<CampaignGaqlRow>(`
+export async function listCampaigns(
+  creds: GoogleAdsCredentials,
+): Promise<CampaignRow[]> {
+  const rows = await gaql<CampaignGaqlRow>(
+    creds,
+    `
     SELECT campaign.id, campaign.name, campaign.status,
            campaign.advertising_channel_type, campaign.serving_status,
            campaign.start_date_time, campaign.end_date_time,
@@ -55,7 +60,8 @@ export async function listCampaigns(): Promise<CampaignRow[]> {
     FROM campaign
     WHERE campaign.status != 'REMOVED'
     ORDER BY campaign.id
-  `);
+  `,
+  );
 
   return rows.map((r) => ({
     id: r.campaign.id,
@@ -73,8 +79,13 @@ export async function listCampaigns(): Promise<CampaignRow[]> {
  * Fetch metrics for all campaigns over a date range.
  * `days` should match a Google Ads LAST_N_DAYS macro (7, 14, 30, ...).
  */
-export async function getCampaignMetrics(days: 7 | 14 | 30 = 7): Promise<MetricsRow[]> {
-  const rows = await gaql<MetricsGaqlRow>(`
+export async function getCampaignMetrics(
+  creds: GoogleAdsCredentials,
+  days: 7 | 14 | 30 = 7,
+): Promise<MetricsRow[]> {
+  const rows = await gaql<MetricsGaqlRow>(
+    creds,
+    `
     SELECT campaign.name, campaign.id,
            metrics.impressions, metrics.clicks,
            metrics.video_trueview_views,
@@ -85,7 +96,8 @@ export async function getCampaignMetrics(days: 7 | 14 | 30 = 7): Promise<Metrics
            metrics.video_quartile_p75_rate, metrics.video_quartile_p100_rate
     FROM campaign
     WHERE segments.date DURING LAST_${days}_DAYS
-  `);
+  `,
+  );
 
   return rows.map((r) => {
     const m = r.metrics;
@@ -119,6 +131,7 @@ export interface DailyMetricRow {
 }
 
 export async function getDailyMetrics(
+  creds: GoogleAdsCredentials,
   campaignId: string,
   days: 7 | 14 | 30 = 14,
 ): Promise<DailyMetricRow[]> {
@@ -131,7 +144,9 @@ export async function getDailyMetrics(
       costMicros?: string;
       ctr?: number;
     };
-  }>(`
+  }>(
+    creds,
+    `
     SELECT segments.date,
            metrics.impressions, metrics.clicks,
            metrics.video_trueview_views,
@@ -140,7 +155,8 @@ export async function getDailyMetrics(
     WHERE campaign.id = ${campaignId}
       AND segments.date DURING LAST_${days}_DAYS
     ORDER BY segments.date
-  `);
+  `,
+  );
 
   return rows.map((r) => ({
     date: r.segments.date,
@@ -176,7 +192,10 @@ export interface CampaignDiagnostic {
   };
 }
 
-export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiagnostic> {
+export async function diagnoseCampaign(
+  creds: GoogleAdsCredentials,
+  campaignId: string,
+): Promise<CampaignDiagnostic> {
   // Campaign + budget
   const campRows = await gaql<{
     campaign: {
@@ -190,13 +209,16 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
       endDateTime?: string;
     };
     campaignBudget?: { amountMicros?: string };
-  }>(`
+  }>(
+    creds,
+    `
     SELECT campaign.id, campaign.name, campaign.status, campaign.serving_status,
            campaign.advertising_channel_type, campaign.bidding_strategy_type,
            campaign.start_date_time, campaign.end_date_time,
            campaign_budget.amount_micros
     FROM campaign WHERE campaign.id = ${campaignId}
-  `);
+  `,
+  );
   if (campRows.length === 0) {
     throw new Error(`Campaign ${campaignId} not found`);
   }
@@ -206,10 +228,13 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
   // Ad groups
   const agRows = await gaql<{
     adGroup: { id: string; name: string; status: string; cpcBidMicros?: string };
-  }>(`
+  }>(
+    creds,
+    `
     SELECT ad_group.id, ad_group.name, ad_group.status, ad_group.cpc_bid_micros
     FROM ad_group WHERE campaign.id = ${campaignId}
-  `);
+  `,
+  );
 
   // Ads
   const adRows = await gaql<{
@@ -218,12 +243,15 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
       status: string;
       policySummary?: { approvalStatus?: string };
     };
-  }>(`
+  }>(
+    creds,
+    `
     SELECT ad_group_ad.ad.id, ad_group_ad.ad.name,
            ad_group_ad.ad.type, ad_group_ad.status,
            ad_group_ad.policy_summary.approval_status
     FROM ad_group_ad WHERE campaign.id = ${campaignId}
-  `);
+  `,
+  );
 
   // Ad-group-level criteria (Demand Gen with upgradedTargeting)
   let geoCount = 0;
@@ -231,12 +259,15 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
   try {
     const agCritRows = await gaql<{
       adGroupCriterion: { type: string };
-    }>(`
+    }>(
+      creds,
+      `
       SELECT ad_group_criterion.type,
              ad_group_criterion.location.geo_target_constant,
              ad_group_criterion.language.language_constant
       FROM ad_group_criterion WHERE campaign.id = ${campaignId}
-    `);
+    `,
+    );
     for (const r of agCritRows) {
       if (r.adGroupCriterion.type === "LOCATION") geoCount++;
       else if (r.adGroupCriterion.type === "LANGUAGE") langCount++;
@@ -251,10 +282,13 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
   try {
     const cCritRows = await gaql<{
       campaignCriterion: { type: string; negative?: boolean };
-    }>(`
+    }>(
+      creds,
+      `
       SELECT campaign_criterion.type, campaign_criterion.negative
       FROM campaign_criterion WHERE campaign.id = ${campaignId}
-    `);
+    `,
+    );
     for (const r of cCritRows) {
       const t = r.campaignCriterion.type;
       if (t === "KEYWORD") {
@@ -306,61 +340,90 @@ export async function diagnoseCampaign(campaignId: string): Promise<CampaignDiag
 }
 
 /** Flip a campaign to ENABLED status. */
-export async function enableCampaign(campaignId: string): Promise<void> {
-  const env = getEnv();
-  await apiCall("POST", `customers/${env.customerId}/campaigns:mutate`, {
-    operations: [
-      {
-        updateMask: "status",
-        update: {
-          resourceName: `customers/${env.customerId}/campaigns/${campaignId}`,
-          status: "ENABLED",
+export async function enableCampaign(
+  creds: GoogleAdsCredentials,
+  campaignId: string,
+): Promise<void> {
+  await apiCall(
+    creds,
+    "POST",
+    `customers/${creds.customerId}/campaigns:mutate`,
+    {
+      operations: [
+        {
+          updateMask: "status",
+          update: {
+            resourceName: `customers/${creds.customerId}/campaigns/${campaignId}`,
+            status: "ENABLED",
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+  );
 }
 
 /** Flip a campaign to PAUSED status. */
-export async function pauseCampaign(campaignId: string): Promise<void> {
-  const env = getEnv();
-  await apiCall("POST", `customers/${env.customerId}/campaigns:mutate`, {
-    operations: [
-      {
-        updateMask: "status",
-        update: {
-          resourceName: `customers/${env.customerId}/campaigns/${campaignId}`,
-          status: "PAUSED",
+export async function pauseCampaign(
+  creds: GoogleAdsCredentials,
+  campaignId: string,
+): Promise<void> {
+  await apiCall(
+    creds,
+    "POST",
+    `customers/${creds.customerId}/campaigns:mutate`,
+    {
+      operations: [
+        {
+          updateMask: "status",
+          update: {
+            resourceName: `customers/${creds.customerId}/campaigns/${campaignId}`,
+            status: "PAUSED",
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+  );
 }
 
 /** Remove (soft-delete) a campaign. Legacy VIDEO campaigns cannot be deleted. */
-export async function deleteCampaign(campaignId: string): Promise<void> {
-  const env = getEnv();
-  await apiCall("POST", `customers/${env.customerId}/campaigns:mutate`, {
-    operations: [
-      {
-        remove: `customers/${env.customerId}/campaigns/${campaignId}`,
-      },
-    ],
-  });
+export async function deleteCampaign(
+  creds: GoogleAdsCredentials,
+  campaignId: string,
+): Promise<void> {
+  await apiCall(
+    creds,
+    "POST",
+    `customers/${creds.customerId}/campaigns:mutate`,
+    {
+      operations: [
+        {
+          remove: `customers/${creds.customerId}/campaigns/${campaignId}`,
+        },
+      ],
+    },
+  );
 }
 
 /** Update a campaign's daily budget (by mutating the linked budget resource). */
-export async function updateBudget(budgetResourceName: string, dailyUsd: number): Promise<void> {
-  const env = getEnv();
-  await apiCall("POST", `customers/${env.customerId}/campaignBudgets:mutate`, {
-    operations: [
-      {
-        updateMask: "amount_micros",
-        update: {
-          resourceName: budgetResourceName,
-          amountMicros: String(Math.round(dailyUsd * 1_000_000)),
+export async function updateBudget(
+  creds: GoogleAdsCredentials,
+  budgetResourceName: string,
+  dailyUsd: number,
+): Promise<void> {
+  await apiCall(
+    creds,
+    "POST",
+    `customers/${creds.customerId}/campaignBudgets:mutate`,
+    {
+      operations: [
+        {
+          updateMask: "amount_micros",
+          update: {
+            resourceName: budgetResourceName,
+            amountMicros: String(Math.round(dailyUsd * 1_000_000)),
+          },
         },
-      },
-    ],
-  });
+      ],
+    },
+  );
 }

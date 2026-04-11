@@ -3,6 +3,11 @@ import {
   diagnoseCampaign,
   deleteCampaign,
 } from "@/lib/google-ads/campaigns";
+import {
+  getAuthContext,
+  unauthorizedResponse,
+  notConnectedResponse,
+} from "@/lib/auth-context";
 import { jsonError } from "@/lib/api-utils";
 import { log } from "@/lib/logger";
 
@@ -12,10 +17,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const start = Date.now();
   const { id } = await params;
   try {
-    const diagnostic = await diagnoseCampaign(id);
+    const auth = await getAuthContext();
+    if (!auth.user) return unauthorizedResponse();
+    if (!auth.googleAdsCreds) return notConnectedResponse();
+
+    const diagnostic = await diagnoseCampaign(auth.googleAdsCreds, id);
     log.info({
       route: `GET /api/campaigns/${id}`,
       event: "diagnose_success",
+      user_id: auth.user.id,
       ms: Date.now() - start,
     });
     return NextResponse.json(diagnostic);
@@ -34,10 +44,15 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const start = Date.now();
   const { id } = await params;
   try {
-    await deleteCampaign(id);
+    const auth = await getAuthContext();
+    if (!auth.user) return unauthorizedResponse();
+    if (!auth.googleAdsCreds) return notConnectedResponse();
+
+    await deleteCampaign(auth.googleAdsCreds, id);
     log.info({
       route: `DELETE /api/campaigns/${id}`,
       event: "delete_success",
+      user_id: auth.user.id,
       ms: Date.now() - start,
     });
     return NextResponse.json({ ok: true });

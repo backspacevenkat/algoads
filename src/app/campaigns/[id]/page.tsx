@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import {
   diagnoseCampaign,
   getDailyMetrics,
 } from "@/lib/google-ads/campaigns";
+import type { GoogleAdsCredentials } from "@/lib/google-ads/client";
+import { getAuthContext } from "@/lib/auth-context";
 import { formatUsd, formatNumber } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import { MetricsChart } from "./metrics-chart";
@@ -18,11 +20,11 @@ import { GoogleAdsApiError } from "@/lib/google-ads/types";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function loadCampaign(id: string) {
+async function loadCampaign(creds: GoogleAdsCredentials, id: string) {
   try {
     const [diagnostic, daily] = await Promise.all([
-      diagnoseCampaign(id),
-      getDailyMetrics(id, 14),
+      diagnoseCampaign(creds, id),
+      getDailyMetrics(creds, id, 14),
     ]);
     return { diagnostic, daily, error: null };
   } catch (e) {
@@ -48,7 +50,11 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await loadCampaign(id);
+  const auth = await getAuthContext();
+  if (!auth.user) redirect(`/login?next=/campaigns/${id}`);
+  if (!auth.googleAdsCreds) redirect("/campaigns");
+
+  const data = await loadCampaign(auth.googleAdsCreds, id);
 
   if (data === null) notFound();
 

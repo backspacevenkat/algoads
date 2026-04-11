@@ -20,7 +20,8 @@
  * 5. `call_to_actions` is optional — each item needs a pre-uploaded
  *    CallToActionAsset resource. Skip it unless needed.
  */
-import { apiCall, getEnv } from "./client";
+import { apiCall } from "./client";
+import type { GoogleAdsCredentials } from "./client";
 import type { CreateDemandGenInput, CreateDemandGenResult } from "./types";
 import { GoogleAdsApiError } from "./types";
 
@@ -41,12 +42,18 @@ function formatDateTime(d: Date): string {
  * Rollback partial state on failure. Deletes the budget (which will cascade-
  * disable dependent campaigns, though they stay around as REMOVED).
  */
-async function rollback(budgetResourceName: string, reason: string): Promise<never> {
-  const env = getEnv();
+async function rollback(
+  creds: GoogleAdsCredentials,
+  budgetResourceName: string,
+  reason: string,
+): Promise<never> {
   try {
-    await apiCall("POST", `customers/${env.customerId}/campaignBudgets:mutate`, {
-      operations: [{ remove: budgetResourceName }],
-    });
+    await apiCall(
+      creds,
+      "POST",
+      `customers/${creds.customerId}/campaignBudgets:mutate`,
+      { operations: [{ remove: budgetResourceName }] },
+    );
   } catch {
     // ignore — cleanup is best-effort
   }
@@ -58,10 +65,10 @@ async function rollback(budgetResourceName: string, reason: string): Promise<nev
  * Returns resource names for every created entity.
  */
 export async function createDemandGenCampaign(
+  creds: GoogleAdsCredentials,
   input: CreateDemandGenInput,
 ): Promise<CreateDemandGenResult> {
-  const env = getEnv();
-  const customerPath = `customers/${env.customerId}`;
+  const customerPath = `customers/${creds.customerId}`;
   const timestamp = Math.floor(Date.now() / 1000);
 
   // Default to retention-safe channels (YouTube In-Feed only)
@@ -77,6 +84,7 @@ export async function createDemandGenCampaign(
   // ─── STEP 1: Budget ──────────────────────────────────────────────
   const budgetMicros = Math.round(input.dailyBudgetUsd * 1_000_000);
   const budgetResp = await apiCall<MutateResponse>(
+    creds,
     "POST",
     `${customerPath}/campaignBudgets:mutate`,
     {
@@ -103,6 +111,7 @@ export async function createDemandGenCampaign(
   let campaignRn: string;
   try {
     const campResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/campaigns:mutate`,
       {
@@ -127,7 +136,7 @@ export async function createDemandGenCampaign(
     );
     campaignRn = campResp.results[0].resourceName;
   } catch (e) {
-    await rollback(budgetRn, `campaign create: ${(e as Error).message}`);
+    await rollback(creds, budgetRn, `campaign create: ${(e as Error).message}`);
     throw e; // unreachable, satisfies TS
   }
   const campaignId = campaignRn.split("/").pop()!;
@@ -136,6 +145,7 @@ export async function createDemandGenCampaign(
   let agRn: string;
   try {
     const agResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/adGroups:mutate`,
       {
@@ -158,7 +168,7 @@ export async function createDemandGenCampaign(
     );
     agRn = agResp.results[0].resourceName;
   } catch (e) {
-    await rollback(budgetRn, `ad group create: ${(e as Error).message}`);
+    await rollback(creds, budgetRn, `ad group create: ${(e as Error).message}`);
     throw e;
   }
 
@@ -183,6 +193,7 @@ export async function createDemandGenCampaign(
   let criteriaCount = 0;
   try {
     const critResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/adGroupCriteria:mutate`,
       { operations: criterionOps },
@@ -198,6 +209,7 @@ export async function createDemandGenCampaign(
   let logoAssetRn: string;
   try {
     const videoResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/assets:mutate`,
       {
@@ -215,6 +227,7 @@ export async function createDemandGenCampaign(
     videoAssetRn = videoResp.results[0].resourceName;
 
     const logoResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/assets:mutate`,
       {
@@ -231,7 +244,7 @@ export async function createDemandGenCampaign(
     );
     logoAssetRn = logoResp.results[0].resourceName;
   } catch (e) {
-    await rollback(budgetRn, `asset upload: ${(e as Error).message}`);
+    await rollback(creds, budgetRn, `asset upload: ${(e as Error).message}`);
     throw e;
   }
 
@@ -243,6 +256,7 @@ export async function createDemandGenCampaign(
   let adRn: string;
   try {
     const adResp = await apiCall<MutateResponse>(
+      creds,
       "POST",
       `${customerPath}/adGroupAds:mutate`,
       {

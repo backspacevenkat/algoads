@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { listCampaigns, getCampaignMetrics } from "@/lib/google-ads/campaigns";
+import type { GoogleAdsCredentials } from "@/lib/google-ads/client";
+import { getAuthContext } from "@/lib/auth-context";
 import { formatUsd, formatNumber, formatPct } from "@/lib/utils";
-import { Plus, Radio, Pause, CircleSlash } from "lucide-react";
+import { Plus, Radio, Pause, CircleSlash, Link2 } from "lucide-react";
 import type { CampaignRow, MetricsRow } from "@/lib/google-ads/types";
 
 // Force dynamic so we always hit the live API (no build-time prerender)
@@ -35,14 +38,16 @@ function statusBadge(status: CampaignRow["status"]) {
   );
 }
 
-async function loadData(): Promise<
+async function loadData(
+  creds: GoogleAdsCredentials,
+): Promise<
   { campaigns: CampaignRow[]; metricsById: Map<string, MetricsRow>; error: null } |
   { campaigns: null; metricsById: null; error: string }
 > {
   try {
     const [campaigns, metrics] = await Promise.all([
-      listCampaigns(),
-      getCampaignMetrics(7),
+      listCampaigns(creds),
+      getCampaignMetrics(creds, 7),
     ]);
     const metricsById = new Map(metrics.map((m) => [m.campaignId, m]));
     return { campaigns, metricsById, error: null };
@@ -56,7 +61,47 @@ async function loadData(): Promise<
 }
 
 export default async function DashboardPage() {
-  const data = await loadData();
+  const auth = await getAuthContext();
+  if (!auth.user) redirect("/login?next=/campaigns");
+
+  // User logged in but hasn't connected a Google Ads account — show CTA
+  if (!auth.googleAdsCreds) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Signed in as {auth.user.email}
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center space-y-4">
+            <div className="inline-flex items-center justify-center size-14 rounded-full bg-cyan-500/[0.12] text-cyan-400">
+              <Link2 className="size-7" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Connect your Google Ads account</h2>
+              <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                AlgoAds needs access to your Google Ads account to launch and
+                monitor campaigns. You&apos;ll be redirected to Google to grant
+                permission — we only request the scopes required for Demand
+                Gen campaigns.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link href="/api/oauth/google-ads/start">
+                <Button size="lg">
+                  Connect Google Ads
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const data = await loadData(auth.googleAdsCreds);
 
   return (
     <div className="space-y-6">

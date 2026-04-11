@@ -1,74 +1,54 @@
 /**
- * Next.js 16 proxy (formerly middleware) — simple password gate for admin
- * pages and API routes.
+ * Next.js 16 proxy — route gate for admin areas.
  *
- * What's protected:
- *   - /campaigns        — dashboard list
- *   - /campaigns/[id]   — campaign detail
- *   - /launch           — campaign launcher
- *   - /api/**           — all API routes EXCEPT /api/auth (the login handler)
+ * This is defense-in-depth only. The real auth check runs inside server
+ * components and API routes via `getAuthContext()` (which validates the
+ * InsForge access token against their API). The proxy's job is to redirect
+ * unauthenticated users to /login before we bother hitting any code.
  *
- * What's public:
- *   - /                 — marketing landing page
- *   - /login            — password form
- *   - /api/auth         — POST login handler
- *   - all static assets (logo, favicon, og-image)
+ * Authentication signal: presence of the `insforge_refresh` cookie.
+ * Whoever holds a valid cookie has some chance of having a live session;
+ * the downstream getAuthContext will confirm it for real.
  *
- * Two ways to authenticate:
- *   1. Cookie `algoads_session` = sha256(ALGOADS_ADMIN_PASSWORD) — set by
- *      the /login form after the user enters the password. 30-day expiry.
- *   2. Header `Authorization: Bearer <ALGOADS_API_TOKEN>` — used by the MCP
- *      server and by any programmatic caller.
+ * Protected routes:
+ *   - /campaigns       (dashboard)
+ *   - /launch          (campaign launcher)
+ *   - /api/campaigns/**
+ *   - /api/creative/**
  *
- * If ALGOADS_ADMIN_PASSWORD is unset (local dev), the gate is disabled and
- * everything is accessible — makes `npm run dev` painless.
+ * Always public:
+ *   - /                (marketing landing)
+ *   - /login           (Supabase-style password form)
+ *   - /signup          (new account)
+ *   - /api/auth/**     (signup/login/logout handlers)
+ *   - /api/oauth/**    (Google Ads connect flow)
  */
 import { NextRequest, NextResponse } from "next/server";
 
-// Web Crypto SHA-256 helper — available in Node.js 20+ and Edge runtimes.
-async function sha256Hex(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+const REFRESH_COOKIE = "insforge_refresh";
 
 function isProtectedPath(pathname: string): boolean {
-  if (pathname === "/login" || pathname === "/api/auth") return false;
+  // Auth + OAuth endpoints are always public so users can sign in / connect
+  if (pathname === "/login" || pathname === "/signup") return false;
+  if (pathname.startsWith("/api/auth/")) return false;
+  if (pathname.startsWith("/api/oauth/")) return false;
+
   if (pathname.startsWith("/campaigns")) return true;
   if (pathname.startsWith("/launch")) return true;
-  if (pathname.startsWith("/api/")) return true;
+  if (pathname.startsWith("/api/campaigns")) return true;
+  if (pathname.startsWith("/api/creative")) return true;
   return false;
 }
 
-export async function proxy(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   if (!isProtectedPath(pathname)) {
     return NextResponse.next();
   }
 
-  const gateValue = process.env.ALGOADS_ADMIN_PASSWORD;
-  // Dev mode: no password configured → gate is off
-  if (!gateValue) {
-    return NextResponse.next();
-  }
-
-  // 1) Bearer token (for MCP / programmatic access)
-  const apiToken = process.env.ALGOADS_API_TOKEN;
-  if (apiToken) {
-    const authHeader = req.headers.get("authorization") ?? "";
-    const expected = `Bearer ${apiToken}`;
-    if (authHeader === expected) {
-      return NextResponse.next();
-    }
-  }
-
-  // 2) Cookie-based session
-  const expectedCookie = await sha256Hex(gateValue);
-  const cookie = req.cookies.get("algoads_session")?.value;
-  if (cookie === expectedCookie) {
+  const hasRefresh = !!req.cookies.get(REFRESH_COOKIE)?.value;
+  if (hasRefresh) {
     return NextResponse.next();
   }
 
@@ -82,10 +62,6 @@ export async function proxy(req: NextRequest) {
   loginUrl.search = `?next=${encodeURIComponent(pathname + search)}`;
   return NextResponse.redirect(loginUrl);
 }
-
-// Next.js 16 proxy.ts always runs on Node.js — the runtime is implicit and
-// declaring it explicitly causes a build error. See CVE-2025-29927 context
-// for why the rename from middleware.ts → proxy.ts happened.
 
 // Run on all routes except Next.js internals and public static files
 export const config = {

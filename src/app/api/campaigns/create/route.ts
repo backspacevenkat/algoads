@@ -3,6 +3,11 @@ import { z } from "zod";
 import { createDemandGenCampaign } from "@/lib/google-ads/demand-gen";
 import type { CreateDemandGenInput } from "@/lib/google-ads/types";
 import { INDIA_TECH_CITIES, LANG_ENGLISH } from "@/lib/google-ads/geos";
+import {
+  getAuthContext,
+  unauthorizedResponse,
+  notConnectedResponse,
+} from "@/lib/auth-context";
 import { jsonError } from "@/lib/api-utils";
 import { log } from "@/lib/logger";
 
@@ -41,6 +46,10 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   const start = Date.now();
   try {
+    const auth = await getAuthContext();
+    if (!auth.user) return unauthorizedResponse();
+    if (!auth.googleAdsCreds) return notConnectedResponse();
+
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
@@ -64,13 +73,14 @@ export async function POST(req: Request) {
     log.info({
       route: "POST /api/campaigns/create",
       event: "create_start",
+      user_id: auth.user.id,
       campaignName: input.campaignName,
       videoId: input.videoId,
       budget: input.dailyBudgetUsd,
       geos: input.locations.length,
     });
 
-    const result = await createDemandGenCampaign(input);
+    const result = await createDemandGenCampaign(auth.googleAdsCreds, input);
 
     log.info({
       route: "POST /api/campaigns/create",
