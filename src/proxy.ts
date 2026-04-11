@@ -27,6 +27,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 const REFRESH_COOKIE = "insforge_refresh";
 
+/**
+ * Canonical host — we enforce apex (algo-thinker.com) and redirect any
+ * www.algo-thinker.com visitor to the same path on the apex. This avoids
+ * subdomain cookie-scoping bugs: a cookie set on `www` isn't sent on a
+ * request to the apex, which broke the Google Ads OAuth flow when the
+ * callback URL was configured to apex but the user started on www.
+ *
+ * In dev the host is localhost:3000 which isn't www, so this is a no-op.
+ */
+const CANONICAL_HOST = "algo-thinker.com";
+
 function isProtectedPath(pathname: string): boolean {
   // Auth + OAuth endpoints are always public so users can sign in / connect
   if (pathname === "/login" || pathname === "/signup") return false;
@@ -42,6 +53,15 @@ function isProtectedPath(pathname: string): boolean {
 
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+  const host = req.headers.get("host") ?? "";
+
+  // Canonicalize www → apex. Runs before the auth gate so ALL requests
+  // (public or protected) end up on the canonical host.
+  if (host === `www.${CANONICAL_HOST}`) {
+    const apex = req.nextUrl.clone();
+    apex.host = CANONICAL_HOST;
+    return NextResponse.redirect(apex, 308);
+  }
 
   if (!isProtectedPath(pathname)) {
     return NextResponse.next();
