@@ -150,6 +150,85 @@ export async function refreshSession(
   );
 }
 
+/**
+ * Initiate an InsForge OAuth PKCE flow. Returns the URL to redirect the
+ * user to for provider sign-in. The caller must generate code_verifier and
+ * code_challenge, and store the verifier for the callback exchange step.
+ *
+ * Supported providers: google, github, discord, linkedin, facebook,
+ * instagram, tiktok, apple, x, spotify, microsoft.
+ */
+export async function initiateOAuth(
+  provider: "google" | "github",
+  redirectUri: string,
+  codeChallenge: string,
+): Promise<string> {
+  const baseUrl = requireBaseUrl();
+  const url =
+    `${baseUrl}/api/auth/oauth/${provider}?` +
+    new URLSearchParams({
+      redirect_uri: redirectUri,
+      code_challenge: codeChallenge,
+    }).toString();
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${requireAnonKey()}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new InsForgeAuthError(res.status, body, `OAuth initiate failed: ${body.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { authUrl: string };
+  if (!data.authUrl) {
+    throw new Error("InsForge did not return an authUrl");
+  }
+  return data.authUrl;
+}
+
+/**
+ * Exchange the `insforge_code` received in the OAuth callback for a full
+ * session. Uses the previously stored `code_verifier` (PKCE).
+ */
+export async function exchangeOAuthCode(
+  code: string,
+  codeVerifier: string,
+): Promise<SignUpOrInResponse> {
+  return insforgeFetch<SignUpOrInResponse>(
+    "/api/auth/oauth/exchange?client_type=server",
+    {
+      method: "POST",
+      body: JSON.stringify({ code, code_verifier: codeVerifier }),
+    },
+  );
+}
+
+/**
+ * Generate a PKCE code verifier + challenge pair.
+ * Verifier is a 64-char URL-safe random string, challenge is SHA-256 base64url.
+ */
+export async function generatePkcePair(): Promise<{
+  verifier: string;
+  challenge: string;
+}> {
+  const bytes = new Uint8Array(48); // 48 bytes → ~64 chars of base64url
+  crypto.getRandomValues(bytes);
+  const verifier = base64UrlEncode(bytes);
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(verifier),
+  );
+  const challenge = base64UrlEncode(new Uint8Array(digest));
+  return { verifier, challenge };
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  // Node.js Buffer is available in Next.js server runtime
+  const b64 = Buffer.from(bytes).toString("base64");
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 /** Fetch the current user given an access token. Returns null on expired/invalid. */
 export async function fetchCurrentUser(
   accessToken: string,
