@@ -1,7 +1,7 @@
 /**
  * Retention-safe Demand Gen campaign creation pipeline.
  *
- * Ported from scripts/algo_ads.py in story-forge. Encodes 5 non-obvious
+ * Ported from scripts/algo_ads.py in story-forge. Encodes 6 non-obvious
  * v23 rules that aren't in the official docs:
  *
  * 1. `demandGenCampaignSettings.upgradedTargeting = true` moves geo/language
@@ -19,6 +19,16 @@
  *
  * 5. `call_to_actions` is optional — each item needs a pre-uploaded
  *    CallToActionAsset resource. Skip it unless needed.
+ *
+ * 6. Use `targetSpend: {}` (Maximize Clicks / Campaign goal = "Clicks"), NOT
+ *    `maximizeConversions: {}`. We learned the hard way (2026-04-16) that
+ *    Max Conversions refuses to serve until at least one conversion action
+ *    is "verified" — i.e. has actually fired. For a brand-new account
+ *    promoting YouTube video views, there's no way to fire conversions
+ *    before ads run, and ads won't run without conversions. Stuck in
+ *    "Eligible (Limited)" indefinitely. `targetSpend` bypasses this trap
+ *    entirely: ad-group-level `cpcBidMicros` becomes the CPC ceiling, and
+ *    the campaign starts serving immediately once approved.
  */
 import { apiCall } from "./client";
 import type { GoogleAdsCredentials } from "./client";
@@ -169,7 +179,9 @@ export async function createDemandGenCampaign(
               campaignBudget: budgetRn,
               startDateTime: formatDateTime(now),
               endDateTime: formatDateTime(endDt),
-              maximizeConversions: {},
+              // Clicks goal / Maximize Clicks bidding. See rule 6 above.
+              // Ad-group `cpcBidMicros` (set in STEP 3) acts as the CPC ceiling.
+              targetSpend: {},
               containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
               demandGenCampaignSettings: {
                 upgradedTargeting: true,
