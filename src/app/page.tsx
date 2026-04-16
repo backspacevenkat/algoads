@@ -3,16 +3,16 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Cpu, Film, Globe, Youtube } from "lucide-react";
+import { ArrowRight, Cpu, Film, Globe, Youtube, Megaphone } from "lucide-react";
 
 export const metadata = {
-  title: "Algo Thinker — Documentaries on AI, Autonomous Systems & Emerging Tech",
+  title: "Algo Thinker — Documentaries + AlgoAds Google Ads API Tool",
   description:
-    "Long-form visual documentaries about AI, machine learning, autonomous systems, and the engineering behind the technologies redefining modern life.",
+    "Algo Thinker produces long-form documentaries on AI and autonomous systems, and builds AlgoAds — a Google Ads API tool that automates Demand Gen campaign creation for YouTube video promotion.",
   openGraph: {
     title: "Algo Thinker",
     description:
-      "Long-form documentaries about AI, autonomous systems, and emerging technologies.",
+      "Documentaries on AI, autonomous systems, and the AlgoAds Google Ads automation tool.",
     url: "https://algo-thinker.com",
     type: "website",
     images: ["/og-image.png"],
@@ -21,7 +21,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Algo Thinker",
     description:
-      "Long-form documentaries about AI, autonomous systems, and emerging technologies.",
+      "Documentaries on AI, autonomous systems, and the AlgoAds Google Ads automation tool.",
     images: ["/og-image.png"],
   },
 };
@@ -149,6 +149,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── AlgoAds tool ─────────────────────────────────── */}
+      <section id="algoads" className="space-y-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-200 bg-amber-50">
+          <span className="size-1.5 rounded-full bg-amber-500" />
+          <span className="font-mono text-[11px] font-semibold tracking-[0.14em] uppercase text-amber-700">
+            Product · Internal Tool
+          </span>
+        </div>
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-bold">
+            AlgoAds — the campaign tool behind the channel
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground max-w-3xl leading-relaxed">
+            To promote our documentaries on YouTube efficiently, we built{" "}
+            <strong>AlgoAds</strong> — a Google Ads campaign automation tool
+            that uses the Google Ads API to create Demand Gen video campaigns
+            in under 5 minutes. It signs in with your own Google Ads account,
+            generates ad creative with Gemini, launches campaigns on your own
+            budget, and shows live performance in a simple dashboard. We
+            currently use AlgoAds to run our own channel&apos;s promotion and
+            plan to open it to other creators.
+          </p>
+        </div>
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50/60 to-white">
+          <CardContent className="pt-7 pb-6 space-y-4">
+            <div className="flex gap-3 items-start">
+              <div className="size-10 rounded-xl grid place-items-center bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
+                <Megaphone className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-1.5">
+                  Google Ads API use case
+                </h3>
+                <p className="text-[15px] text-muted-foreground leading-relaxed">
+                  AlgoAds calls the Google Ads REST API v23 on the
+                  user&apos;s explicit behalf — only to create, read, and
+                  manage the campaigns the user launches through our UI. Full
+                  scope, data flow, and retention policies are documented on
+                  our use-case page.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link href="/ads-api">
+                    <Button variant="outline">
+                      Read the API use case
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/privacy">
+                    <Button variant="ghost" size="sm">
+                      Privacy Policy
+                    </Button>
+                  </Link>
+                  <Link href="/terms">
+                    <Button variant="ghost" size="sm">
+                      Terms of Service
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* ─── Contact ────────────────────────────────────────── */}
       <section id="contact" className="text-center space-y-6 pt-6">
         <Separator />
@@ -185,18 +249,42 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Footer ─────────────────────────────────────────── */}
-      <footer className="border-t border-border pt-10 pb-6 text-center text-sm text-muted-foreground">
-        © 2026 Algo Thinker · Founded by Venkat Ghanta ·{" "}
-        <a
-          href="mailto:venkat@algo-thinker.com"
-          className="hover:text-foreground transition-colors"
-        >
-          venkat@algo-thinker.com
-        </a>
-        {" · "}
-        <Link href="/campaigns" className="hover:text-foreground transition-colors">
-          Admin
-        </Link>
+      <footer className="border-t border-border pt-10 pb-6 text-center text-sm text-muted-foreground space-y-2">
+        <div>
+          © 2026 Algo Thinker · Founded by Venkat Ghanta ·{" "}
+          <a
+            href="mailto:venkat@algo-thinker.com"
+            className="hover:text-foreground transition-colors"
+          >
+            venkat@algo-thinker.com
+          </a>
+        </div>
+        <div className="flex gap-4 justify-center flex-wrap">
+          <Link
+            href="/ads-api"
+            className="hover:text-foreground transition-colors"
+          >
+            Google Ads API use case
+          </Link>
+          <Link
+            href="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="hover:text-foreground transition-colors"
+          >
+            Terms
+          </Link>
+          <Link
+            href="/campaigns"
+            className="hover:text-foreground transition-colors"
+          >
+            Admin
+          </Link>
+        </div>
       </footer>
     </div>
   );
