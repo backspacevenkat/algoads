@@ -17,9 +17,12 @@ export const dynamic = "force-dynamic";
 
 const OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/adwords",
-  "https://www.googleapis.com/auth/youtube.readonly",
+  // Full YouTube scope (not just readonly) — required for Brand Account
+  // channels accessed via managedByMe=true. Also covers upload + manage.
+  "https://www.googleapis.com/auth/youtube",
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/yt-analytics.readonly",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
 ].join(" ");
 
 function requireEnv(name: string): string {

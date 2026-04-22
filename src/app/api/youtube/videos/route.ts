@@ -21,18 +21,41 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await getAuthContext();
   if (!auth.user) return unauthorizedResponse();
   if (!auth.googleAdsCreds) return notConnectedResponse();
 
+  const url = new URL(req.url);
+  const channelId = url.searchParams.get("channelId");
+
   try {
     // Step 1: get the uploads playlist ID
-    const channelResp = await youtubeApiFetch<YouTubeListResponse<YouTubeChannel>>(
-      "channels",
-      auth.googleAdsCreds,
-      { part: "contentDetails", mine: "true" },
-    );
+    // Support both personal channels (mine=true) and Brand Accounts (by ID or managedByMe)
+    let channelResp: YouTubeListResponse<YouTubeChannel>;
+
+    if (channelId) {
+      channelResp = await youtubeApiFetch<YouTubeListResponse<YouTubeChannel>>(
+        "channels",
+        auth.googleAdsCreds,
+        { part: "contentDetails", id: channelId },
+      );
+    } else {
+      // Try personal channel first
+      channelResp = await youtubeApiFetch<YouTubeListResponse<YouTubeChannel>>(
+        "channels",
+        auth.googleAdsCreds,
+        { part: "contentDetails", mine: "true" },
+      );
+      // Fall back to Brand Account channels
+      if (!channelResp.items?.length) {
+        channelResp = await youtubeApiFetch<YouTubeListResponse<YouTubeChannel>>(
+          "channels",
+          auth.googleAdsCreds,
+          { part: "contentDetails", managedByMe: "true" },
+        );
+      }
+    }
 
     if (!channelResp.items?.length) {
       return NextResponse.json(
