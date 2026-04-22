@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/utils";
-import { Users, Eye, PlayCircle, Clock, ThumbsUp, MessageSquare } from "lucide-react";
+import { Users, Eye, PlayCircle, Clock, ThumbsUp, MessageSquare, Upload } from "lucide-react";
 
 interface ChannelData {
   id: string;
@@ -144,22 +146,30 @@ export function ChannelDashboard() {
   return (
     <div className="space-y-8">
       {/* Channel header */}
-      <div className="flex items-center gap-4">
-        {channel.thumbnail && (
-          <Image
-            src={channel.thumbnail}
-            alt={channel.name}
-            width={64}
-            height={64}
-            className="rounded-full"
-          />
-        )}
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
-          {channel.customUrl && (
-            <p className="text-sm text-muted-foreground font-mono">{channel.customUrl}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {channel.thumbnail && (
+            <Image
+              src={channel.thumbnail}
+              alt={channel.name}
+              width={64}
+              height={64}
+              className="rounded-full"
+            />
           )}
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
+            {channel.customUrl && (
+              <p className="text-sm text-muted-foreground font-mono">{channel.customUrl}</p>
+            )}
+          </div>
         </div>
+        <Link href="/channel/upload">
+          <Button>
+            <Upload className="size-4 mr-2" />
+            Upload Video
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -183,12 +193,7 @@ export function ChannelDashboard() {
         ) : (
           <div className="grid gap-3">
             {videos.map((v) => (
-              <a
-                key={v.id}
-                href={`https://www.youtube.com/watch?v=${v.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Link key={v.id} href={`/channel/${v.id}`}>
                 <Card className="hover:border-cyan-300 hover:shadow-sm transition-all cursor-pointer">
                   <CardContent className="py-4">
                     <div className="flex gap-4">
@@ -231,7 +236,7 @@ export function ChannelDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </a>
+              </Link>
             ))}
           </div>
         )}

@@ -248,6 +248,65 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Platform pages ──────────────────────────────────── */}
+      <section className="space-y-8">
+        <Separator />
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-bold pt-6">Platform</h2>
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl leading-relaxed">
+            Everything we offer — from YouTube channel management to Google
+            Ads campaign automation.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <PageCard
+            href="/channel"
+            title="Channel Dashboard"
+            desc="YouTube channel stats, video performance, and engagement metrics in one view."
+          />
+          <PageCard
+            href="/channel/upload"
+            title="Upload Video"
+            desc="Upload videos and Shorts to YouTube directly from the dashboard."
+          />
+          <PageCard
+            href="/launch"
+            title="Launch Campaign"
+            desc="Create a Demand Gen video campaign in under 5 minutes with AI-generated creative."
+          />
+          <PageCard
+            href="/campaigns"
+            title="Campaign Dashboard"
+            desc="Monitor impressions, clicks, cost, and performance across all your Google Ads campaigns."
+          />
+          <PageCard
+            href="/ads-api"
+            title="Google Ads API Use Case"
+            desc="How AlgoAds uses the Google Ads API — full scope, data flow, and compliance documentation."
+          />
+          <PageCard
+            href="/privacy"
+            title="Privacy Policy"
+            desc="How we collect, use, and protect your data including Google API user data."
+          />
+          <PageCard
+            href="/terms"
+            title="Terms of Service"
+            desc="Service terms, acceptable use, and liability for AlgoAds users."
+          />
+          <PageCard
+            href="/login"
+            title="Sign In"
+            desc="Sign into your AlgoAds account to manage campaigns and view analytics."
+          />
+          <PageCard
+            href="/signup"
+            title="Create Account"
+            desc="Create a free AlgoAds account and connect your Google Ads + YouTube channels."
+          />
+        </div>
+      </section>
+
       {/* ─── Footer ─────────────────────────────────────────── */}
       <footer className="border-t border-border pt-10 pb-6 text-center text-sm text-muted-foreground space-y-2">
         <div>
@@ -356,5 +415,29 @@ function WorkCard({
         </CardContent>
       </Card>
     </a>
+  );
+}
+
+function PageCard({
+  href,
+  title,
+  desc,
+}: {
+  href: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="h-full hover:border-cyan-300 hover:shadow-sm transition-all cursor-pointer">
+        <CardContent className="pt-6 pb-5">
+          <h3 className="text-base font-semibold mb-1.5">{title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+          <div className="mt-3 text-xs font-semibold text-cyan-700 inline-flex items-center gap-1">
+            Open <ArrowRight className="size-3" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

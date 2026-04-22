@@ -98,6 +98,19 @@ export interface YouTubeAnalyticsResponse {
   rows: YouTubeAnalyticsRow[];
 }
 
+// ─── Comments ─────────────────────────────────────────────────────
+
+export interface YouTubeComment {
+  id: string;
+  authorDisplayName: string;
+  authorProfileImageUrl: string;
+  textDisplay: string;
+  likeCount: number;
+  publishedAt: string;
+  totalReplyCount: number;
+  replies?: YouTubeComment[];
+}
+
 // ─── API List Responses ────────────────────────────────────────────
 
 export interface YouTubeListResponse<T> {
