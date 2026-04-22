@@ -80,18 +80,28 @@ function StatCard({
   );
 }
 
+// Brand Account channels managed by the user — public data accessible via channelId
+const BRAND_CHANNELS = [
+  { id: "UCaw8tzC_jq1gKvGCeSvnDQQ", label: "AlgoThinker" },
+  { id: "UCFTnU05UMCbsY3frMRjhXMQ", label: "SystemDesignThinker" },
+];
+
 export function ChannelDashboard() {
   const [channel, setChannel] = useState<ChannelData | null>(null);
   const [videos, setVideos] = useState<VideoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
+      setError(null);
       try {
+        const params = activeChannel ? `?channelId=${activeChannel}` : "";
         const [chRes, vidRes] = await Promise.all([
-          fetch("/api/youtube/channel"),
-          fetch("/api/youtube/videos"),
+          fetch(`/api/youtube/channel${params}`),
+          fetch(`/api/youtube/videos${params}`),
         ]);
 
         if (!chRes.ok) {
@@ -113,7 +123,7 @@ export function ChannelDashboard() {
       }
     }
     load();
-  }, []);
+  }, [activeChannel]);
 
   if (loading) {
     return (
@@ -145,6 +155,27 @@ export function ChannelDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Channel switcher */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={activeChannel === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveChannel(null)}
+        >
+          My Channel
+        </Button>
+        {BRAND_CHANNELS.map((bc) => (
+          <Button
+            key={bc.id}
+            variant={activeChannel === bc.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveChannel(bc.id)}
+          >
+            {bc.label}
+          </Button>
+        ))}
+      </div>
+
       {/* Channel header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
