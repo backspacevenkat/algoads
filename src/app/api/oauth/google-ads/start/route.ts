@@ -15,14 +15,18 @@ import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
+// Only use SENSITIVE scopes (not RESTRICTED). The full `youtube` and
+// `youtube.force-ssl` scopes are classified as RESTRICTED by Google and
+// block OAuth entirely unless your app passes a security audit. The
+// sensitive scopes below cover everything we need:
+// - youtube.readonly: read channel stats, videos, playlists, Brand Accounts
+// - youtube.upload: upload videos and Shorts
+// - yt-analytics.readonly: read analytics reports
 const OAUTH_SCOPES = [
   "https://www.googleapis.com/auth/adwords",
-  // Full YouTube scope (not just readonly) — required for Brand Account
-  // channels accessed via managedByMe=true. Also covers upload + manage.
-  "https://www.googleapis.com/auth/youtube",
+  "https://www.googleapis.com/auth/youtube.readonly",
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/yt-analytics.readonly",
-  "https://www.googleapis.com/auth/youtube.force-ssl",
 ].join(" ");
 
 function requireEnv(name: string): string {
