@@ -15,7 +15,12 @@ import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-const GOOGLE_ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
+const OAUTH_SCOPES = [
+  "https://www.googleapis.com/auth/adwords",
+  "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/yt-analytics.readonly",
+].join(" ");
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -55,7 +60,7 @@ export async function GET(req: Request) {
     client_id: clientId,
     redirect_uri: redirectUri(req),
     response_type: "code",
-    scope: GOOGLE_ADS_SCOPE,
+    scope: OAUTH_SCOPES,
     // offline + consent is the only way to reliably get a refresh token
     access_type: "offline",
     prompt: "consent",

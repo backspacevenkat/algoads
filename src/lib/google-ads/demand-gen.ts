@@ -121,13 +121,13 @@ export async function createDemandGenCampaign(
   const customerPath = `customers/${creds.customerId}`;
   const timestamp = Math.floor(Date.now() / 1000);
 
-  // Default to retention-safe channels (YouTube In-Feed only)
+  // Default to all high-quality channels (skip Display — low quality)
   const channels = input.channelControls ?? {
     youtubeInFeed: true,
-    youtubeInStream: false,
-    youtubeShorts: false,
-    discover: false,
-    gmail: false,
+    youtubeInStream: true,
+    youtubeShorts: true,
+    discover: true,
+    gmail: true,
     display: false,
   };
 

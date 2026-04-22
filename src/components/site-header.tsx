@@ -15,7 +15,9 @@ import { Youtube } from "lucide-react";
 export function SiteHeader() {
   const pathname = usePathname();
   const isAdmin =
-    pathname.startsWith("/campaigns") || pathname.startsWith("/launch");
+    pathname.startsWith("/campaigns") ||
+    pathname.startsWith("/launch") ||
+    pathname.startsWith("/channel");
 
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
@@ -41,6 +43,9 @@ export function SiteHeader() {
             </Link>
             <Link href="/launch" className="hover:text-foreground transition-colors">
               Launch
+            </Link>
+            <Link href="/channel" className="hover:text-foreground transition-colors">
+              Channel
             </Link>
             <Link href="/" className="hover:text-foreground transition-colors">
               ← Site

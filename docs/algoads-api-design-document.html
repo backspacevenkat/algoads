@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset='utf-8'>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; font-size: 13px; line-height: 1.6; color: #1a1a1a; }
+  h1 { font-size: 24px; border-bottom: 2px solid #0891b2; padding-bottom: 8px; }
+  h2 { font-size: 18px; margin-top: 30px; color: #0891b2; }
+  h3 { font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  td, th { border: 1px solid #ddd; padding: 6px 10px; font-size: 12px; }
+  tr:nth-child(1) { background: #f5f5f5; font-weight: bold; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 11px; overflow-x: auto; white-space: pre-wrap; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
+  li { margin: 4px 0; }
+  a { color: #0891b2; }
+</style>
+</head><body><h1>AlgoAds — Google Ads API Design Document</h1></p><p><strong>Company:</strong> Algo Thinker
+<strong>Product:</strong> AlgoAds — Demand Gen Campaign Automation for YouTube Video Promotion
+<strong>Website:</strong> https://algo-thinker.com
+<strong>API Use Case Page:</strong> https://algo-thinker.com/ads-api
+<strong>Privacy Policy:</strong> https://algo-thinker.com/privacy
+<strong>Terms of Service:</strong> https://algo-thinker.com/terms
+<strong>Developer Contact:</strong> api@algo-thinker.com
+<strong>Date:</strong> April 2026</p><p><hr/></p><p><h2>1. Product Overview</h2></p><p>AlgoAds is a web-based tool that automates the creation of Google Ads Demand Gen video campaigns for YouTube content creators. It reduces the campaign setup time from 1-2 hours (manual Google Ads UI) to under 5 minutes while keeping the creator in full control of their account, budget, and creative.</p><p><strong>Target users:</strong> YouTube content creators who want to promote their own videos via Google Ads but lack the expertise to navigate the full Google Ads interface.</p><p><strong>Business model:</strong> AlgoAds is currently free during beta. Revenue model TBD (potential SaaS subscription for creators). AlgoAds is NOT a Google Ads reseller and does NOT handle billing.</p><p><hr/></p><p><h2>2. User Flow</h2></p><p><h3>Step 1: Authentication</h3>
+<li>User signs into AlgoAds via email/password (managed by InsForge auth backend)</li>
+<li>User connects their Google Ads account via OAuth 2.0 (standard Google consent flow)</li>
+<li>AlgoAds receives a refresh token scoped to the user's Google Ads account</li>
+<li>Refresh token is stored encrypted at rest in our database</li></p><p><h3>Step 2: Creative Generation</h3>
+<li>User pastes a YouTube video URL</li>
+<li>AlgoAds reads public video metadata (title, description, thumbnail) via YouTube oEmbed</li>
+<li>AlgoAds sends video metadata to Google Gemini API to generate ad copy:</li>
+  - 3-5 headlines (max 40 chars each)
+  - 1-5 long headlines (max 90 chars each)
+  - 1-5 descriptions (max 90 chars each)
+  - Business name suggestion
+<li>User reviews and edits all generated copy before proceeding</li></p><p><h3>Step 3: Campaign Configuration</h3>
+<li>User sets daily budget (USD)</li>
+<li>User sets campaign duration (days)</li>
+<li>User uploads a square logo image (min 300x300, PNG or JPG)</li>
+<li>Default targeting: 65 countries (Global South tech markets), English language, YouTube in-feed channel only</li></p><p><h3>Step 4: Campaign Launch via Google Ads API</h3>
+AlgoAds creates the campaign using a 7-step pipeline, all via the Google Ads REST API v23:</p><p><tr><td>Step</td><td>API Endpoint</td><td>What It Creates</td></tr>
+|------|-------------|----------------|
+<tr><td>1</td><td><code>campaignBudgets:mutate</code></td><td>Daily budget resource</td></tr>
+<tr><td>2</td><td><code>campaigns:mutate</code></td><td>Demand Gen campaign (PAUSED by default, targetSpend bidding)</td></tr>
+<tr><td>3</td><td><code>adGroups:mutate</code></td><td>Ad group with channel controls (YouTube in-feed only)</td></tr>
+<tr><td>4</td><td><code>adGroupCriteria:mutate</code></td><td>Geo targeting (65 countries) + language targeting (English)</td></tr>
+<tr><td>5</td><td><code>assets:mutate</code></td><td>YouTube video asset + logo image asset</td></tr>
+<tr><td>6</td><td>(inline)</td><td>Text assets (headlines, descriptions) are inline in the ad</td></tr>
+<tr><td>7</td><td><code>adGroupAds:mutate</code></td><td>DemandGenVideoResponsiveAd with all assets</td></tr></p><p>Campaign is created PAUSED. User enables it from the AlgoAds dashboard.</p><p><h3>Step 5: Dashboard & Management</h3>
+<li>User views campaign list with live metrics queried via GAQL:</li>
+  - <code>SELECT campaign.id, campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.video_views, metrics.cost_micros FROM campaign WHERE campaign.id = {id}</code>
+<li>User can pause, enable, or remove campaigns via <code>campaigns:mutate</code> (status change)</li></p><p><hr/></p><p><h2>3. Google Ads API Endpoints Used</h2></p><p><h3>Read Operations</h3>
+<tr><td>Endpoint</td><td>Purpose</td><td>Trigger</td></tr>
+|----------|---------|---------|
+<tr><td><code>customers/{id}/googleAds:search</code> (GAQL)</td><td>Query campaign list, status, metrics</td><td>Dashboard page load</td></tr>
+<tr><td><code>customers/{id}/googleAds:search</code> (GAQL)</td><td>Query ad group status</td><td>Campaign detail page</td></tr>
+<tr><td><code>geoTargetConstants</code></td><td>Look up geo target IDs for new cities</td><td>Admin function (rare)</td></tr></p><p><h3>Write Operations</h3>
+<tr><td>Endpoint</td><td>Purpose</td><td>Trigger</td></tr>
+|----------|---------|---------|
+<tr><td><code>campaignBudgets:mutate</code></td><td>Create daily budget</td><td>User clicks "Launch"</td></tr>
+<tr><td><code>campaigns:mutate</code></td><td>Create campaign (PAUSED) / change status</td><td>User clicks "Launch" or "Pause"/"Enable"</td></tr>
+<tr><td><code>adGroups:mutate</code></td><td>Create ad group with channel controls</td><td>User clicks "Launch"</td></tr>
+<tr><td><code>adGroupCriteria:mutate</code></td><td>Set geo + language targeting</td><td>User clicks "Launch"</td></tr>
+<tr><td><code>assets:mutate</code></td><td>Upload YouTube video + logo image</td><td>User clicks "Launch"</td></tr>
+<tr><td><code>adGroupAds:mutate</code></td><td>Create DemandGenVideoResponsiveAd</td><td>User clicks "Launch"</td></tr></p><p><h3>What We Do NOT Use</h3>
+<li>We do NOT use the Reporting API for bulk data extraction</li>
+<li>We do NOT use the Remarketing or Customer Match APIs</li>
+<li>We do NOT use the Bidding Strategy Service (we use inline campaign-level bidding)</li>
+<li>We do NOT use the Conversion Tracking API</li>
+<li>We do NOT access or modify account-level settings</li>
+<li>We do NOT manage campaigns on behalf of other advertisers</li></p><p><hr/></p><p><h2>4. Data Flow Diagram</h2></p><p><pre>
+User (YouTube Creator)
+  |
+  |  1. Sign in (email/password via InsForge)
+  |  2. Connect Google Ads (OAuth 2.0)
+  |
+  v
+AlgoAds Server (Next.js on Vercel)
+  |
+  |  3. Store encrypted refresh token
+  |  4. User pastes YouTube URL
+  |  5. Generate creative via Gemini API
+  |  6. User reviews + clicks Launch
+  |
+  |--- Google Ads API v23 (REST) ---------> User's Google Ads Account
+  |    - Create budget                       - Campaign runs here
+  |    - Create campaign (PAUSED)            - Billed to user's payment method
+  |    - Create ad group                     - User owns everything
+  |    - Set geo/language targeting
+  |    - Upload video + logo assets
+  |    - Create video responsive ad
+  |
+  |--- Google Gemini API -----------------> Generate ad copy suggestions
+  |    - Send: video title, description       (public metadata only)
+  |    - Receive: headlines, descriptions
+  |
+  |--- YouTube oEmbed --------------------> Read public video metadata
+       - Send: video URL
+       - Receive: title, thumbnail URL
+</pre></p><p><hr/></p><p><h2>5. Authentication Flow</h2></p><p><pre>
+1. User clicks "Connect Google Ads"
+2. AlgoAds redirects to Google OAuth consent screen
+   - Scope: https://www.googleapis.com/auth/adwords
+3. User grants consent
+4. Google redirects back with authorization code
+5. AlgoAds exchanges code for refresh token (server-side)
+6. Refresh token stored encrypted in database
+7. On each API call: AlgoAds uses refresh token to get short-lived access token
+8. Access token used in Authorization header for Google Ads API calls
+</pre></p><p>User can revoke access at any time via https://myaccount.google.com/permissions</p><p><hr/></p><p><h2>6. Data Storage</h2></p><p><tr><td>Data</td><td>Where Stored</td><td>Encryption</td><td>Retention</td></tr>
+|------|-------------|------------|-----------|
+<tr><td>User email + name</td><td>InsForge (managed DB)</td><td>Encrypted at rest</td><td>Until account deletion</td></tr>
+<tr><td>Google Ads refresh token</td><td>InsForge (managed DB)</td><td>Encrypted at rest</td><td>Until revocation or deletion</td></tr>
+<tr><td>Google Ads customer ID</td><td>InsForge (managed DB)</td><td>Encrypted at rest</td><td>Until account deletion</td></tr>
+<tr><td>Campaign IDs + names</td><td>InsForge (managed DB)</td><td>Encrypted at rest</td><td>Until account deletion</td></tr>
+<tr><td>Campaign metrics</td><td>NOT stored</td><td>N/A</td><td>Queried live via GAQL</td></tr>
+<tr><td>Logo images</td><td>Uploaded to user's Google Ads account</td><td>N/A</td><td>Deleted from our server after upload</td></tr>
+<tr><td>Usage logs</td><td>Vercel server logs</td><td>Standard</td><td>30 days</td></tr></p><p><hr/></p><p><h2>7. Rate Limiting & Error Handling</h2></p><p><li>AlgoAds creates at most 1 campaign per user action (no bulk operations)</li>
+<li>API calls are sequential within a pipeline (7 steps)</li>
+<li>If any step fails, the pipeline rolls back by removing the budget resource</li>
+<li>Standard exponential backoff on transient errors (429, 503)</li>
+<li>Daily API call volume: < 100 calls/day (small user base, no batch operations)</li></p><p><hr/></p><p><h2>8. Compliance</h2></p><p><li><strong>Google API Services User Data Policy:</strong> AlgoAds adheres to the Limited Use requirements. Google user data is used only to provide the campaign management service.</li>
+<li><strong>Privacy Policy:</strong> https://algo-thinker.com/privacy</li>
+<li><strong>Terms of Service:</strong> https://algo-thinker.com/terms</li>
+<li><strong>Data deletion:</strong> Users can request full account deletion via privacy@algo-thinker.com</li></p><p><hr/></p><p><h2>9. Screenshots</h2></p><p>The AlgoAds interface consists of four main screens:</p><p>1. <strong>Launch page</strong> — User pastes YouTube URL, generates creative with Gemini, reviews headlines/descriptions, sets budget, and clicks Launch
+2. <strong>Campaign list</strong> — Shows all campaigns with live metrics (impressions, clicks, cost)
+3. <strong>Campaign detail</strong> — Individual campaign view with pause/enable controls
+4. <strong>Login/Signup</strong> — Standard auth flow with Google OAuth for Ads connection</p><p>Screenshots and a working demo are available at https://algo-thinker.com (sign in required for authenticated pages; public pages include the home page, /ads-api, /privacy, and /terms).
+</body></html>
