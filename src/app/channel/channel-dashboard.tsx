@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/utils";
-import { Users, Eye, PlayCircle, Clock, ThumbsUp, MessageSquare, Upload } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Users, Eye, PlayCircle, Clock, ThumbsUp, MessageSquare, Upload, Plus, X, Loader2 } from "lucide-react";
 
 interface ChannelData {
   id: string;
@@ -80,11 +81,30 @@ function StatCard({
   );
 }
 
-// Brand Account channels managed by the user — public data accessible via channelId
-const BRAND_CHANNELS = [
+// Default Brand Account channels
+const DEFAULT_CHANNELS = [
   { id: "UCaw8tzC_jq1gKvGCeSvnDQQ", label: "AlgoThinker" },
   { id: "UCFTnU05UMCbsY3frMRjhXMQ", label: "SystemDesignThinker" },
 ];
+
+const STORAGE_KEY = "algoads_saved_channels";
+
+interface SavedChannel {
+  id: string;
+  label: string;
+}
+
+function loadSavedChannels(): SavedChannel[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveSavedChannels(channels: SavedChannel[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(channels));
+}
 
 export function ChannelDashboard() {
   const [channel, setChannel] = useState<ChannelData | null>(null);
@@ -92,6 +112,53 @@ export function ChannelDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [savedChannels, setSavedChannels] = useState<SavedChannel[]>([]);
+  const [addUrl, setAddUrl] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Load saved channels from localStorage on mount
+  useEffect(() => {
+    setSavedChannels(loadSavedChannels());
+  }, []);
+
+  async function handleAddChannel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addUrl.trim()) return;
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      const res = await fetch(`/api/youtube/resolve?url=${encodeURIComponent(addUrl.trim())}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? "Channel not found");
+
+      const allChannels = [...DEFAULT_CHANNELS, ...savedChannels];
+      if (allChannels.some((c) => c.id === data.id)) {
+        setAddError("Channel already added");
+        return;
+      }
+
+      const newChannel: SavedChannel = { id: data.id, label: data.name };
+      const updated = [...savedChannels, newChannel];
+      setSavedChannels(updated);
+      saveSavedChannels(updated);
+      setAddUrl("");
+      setShowAddForm(false);
+      setActiveChannel(data.id);
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : "Failed to resolve channel");
+    } finally {
+      setAddLoading(false);
+    }
+  }
+
+  function handleRemoveSaved(id: string) {
+    const updated = savedChannels.filter((c) => c.id !== id);
+    setSavedChannels(updated);
+    saveSavedChannels(updated);
+    if (activeChannel === id) setActiveChannel(null);
+  }
 
   useEffect(() => {
     async function load() {
@@ -156,24 +223,61 @@ export function ChannelDashboard() {
   return (
     <div className="space-y-8">
       {/* Channel switcher */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={activeChannel === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveChannel(null)}
-        >
-          My Channel
-        </Button>
-        {BRAND_CHANNELS.map((bc) => (
+      <div className="space-y-3">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button
-            key={bc.id}
-            variant={activeChannel === bc.id ? "default" : "outline"}
+            variant={activeChannel === null ? "default" : "outline"}
             size="sm"
-            onClick={() => setActiveChannel(bc.id)}
+            onClick={() => setActiveChannel(null)}
           >
-            {bc.label}
+            My Channel
           </Button>
-        ))}
+          {[...DEFAULT_CHANNELS, ...savedChannels].map((bc) => (
+            <div key={bc.id} className="relative group">
+              <Button
+                variant={activeChannel === bc.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveChannel(bc.id)}
+              >
+                {bc.label}
+              </Button>
+              {savedChannels.some((s) => s.id === bc.id) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleRemoveSaved(bc.id); }}
+                  className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="size-2.5" />
+                </button>
+              )}
+            </div>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="text-muted-foreground"
+          >
+            <Plus className="size-4" />
+            Add Channel
+          </Button>
+        </div>
+
+        {showAddForm && (
+          <form onSubmit={handleAddChannel} className="flex gap-2 max-w-lg">
+            <Input
+              placeholder="@handle, channel URL, or channel ID"
+              value={addUrl}
+              onChange={(e) => { setAddUrl(e.target.value); setAddError(null); }}
+              className="text-sm"
+            />
+            <Button type="submit" size="sm" disabled={addLoading || !addUrl.trim()}>
+              {addLoading ? <Loader2 className="size-4 animate-spin" /> : "Add"}
+            </Button>
+          </form>
+        )}
+        {addError && (
+          <p className="text-sm text-destructive">{addError}</p>
+        )}
       </div>
 
       {/* Channel header */}
