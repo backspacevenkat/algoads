@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LoginForm } from "./login-form";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const metadata = {
   title: "Sign in",
@@ -13,7 +14,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const { next, error } = await searchParams;
-  const targetNext = next ?? "/campaigns";
+  const targetNext = safeNextPath(next);
   return (
     <div className="max-w-sm mx-auto mt-16">
       <h1 className="text-2xl font-semibold tracking-tight mb-2">Sign in</h1>

@@ -8,6 +8,7 @@
  * for the Ads connect flow.
  */
 import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/safe-next";
 import { setSessionCookies, signInWithGoogle, AuthError } from "./server";
 import { log } from "@/lib/logger";
 
@@ -114,9 +115,7 @@ export async function completeGoogleSignIn(
     setSessionCookies(store, session);
     log.info({ route: "google sign-in", event: "oauth_success", user_id: session.user.id, ms: Date.now() - start });
 
-    // Only follow local paths, to prevent open redirects
-    const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/campaigns";
-    return NextResponse.redirect(new URL(safeNext, req.url));
+    return NextResponse.redirect(new URL(safeNextPath(next), req.url));
   } catch (e) {
     log.error({
       route: "google sign-in",

@@ -13,13 +13,14 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { googleSignInUrl, SIGNIN_NEXT_COOKIE, SIGNIN_STATE_COOKIE } from "@/lib/auth/google";
 import { log } from "@/lib/logger";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const next = url.searchParams.get("next") ?? "/campaigns";
+    const next = safeNextPath(url.searchParams.get("next"));
 
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);

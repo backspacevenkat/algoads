@@ -173,7 +173,8 @@ export async function signInWithPassword(email: string, passwordInput: string): 
 /**
  * Sign in (or sign up) with a Google identity that Google itself just
  * returned from the token endpoint. Matches on the Google account id first,
- * then links an existing account with the same verified email.
+ * then links an existing account with the same email (taking it over if that
+ * email was never verified).
  */
 export async function signInWithGoogle(profile: {
   sub: string;
@@ -192,6 +193,20 @@ export async function signInWithGoogle(profile: {
   if (!profile.emailVerified) throw new AuthError(403, "Google account email is not verified");
 
   let row = await findUserByEmail(profile.email);
+  if (row && !row.email_verified) {
+    // Nobody ever proved they own this address, so a password account with
+    // it may have been registered by someone else ahead of the real owner.
+    // Google has now verified the owner: drop the unproven password and end
+    // every session before linking, so a squatter keeps no way in.
+    row = await db()
+      .prepare(
+        "UPDATE users SET password = NULL, email_verified = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? RETURNING *",
+      )
+      .bind(row.id)
+      .first<UserRow>();
+    if (!row) throw new AuthError(500, "Could not link account");
+    await db().prepare("DELETE FROM sessions WHERE user_id = ?").bind(row.id).run();
+  }
   if (!row) {
     row = await db()
       .prepare("INSERT INTO users (id, email, email_verified, name) VALUES (?, ?, 1, ?) RETURNING *")
