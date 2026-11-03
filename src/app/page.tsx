@@ -67,6 +67,22 @@ export default function LandingPage() {
           technologies redefining modern life — from Tesla&apos;s Full
           Self-Driving to the X recommendation algorithm.
         </p>
+        {/* Google OAuth verification asks the home page to state the app's
+            purpose under the same name as the consent screen. */}
+        <div className="mt-7 max-w-2xl rounded-xl border border-border bg-white/70 px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">The Algo Thinker app</h2>
+          <p className="mt-1.5 text-[15px] text-muted-foreground leading-relaxed">
+            The Algo Thinker web app lets a YouTube creator promote their own
+            videos: it launches and monitors Google Ads Demand Gen campaigns for
+            their videos, shows their own channel&apos;s statistics and
+            analytics, and uploads videos they choose to their channel. It
+            uses your Google data only for those features and only after you
+            connect your Google account.{" "}
+            <Link href="#algoads" className="underline underline-offset-2">How it works</Link>
+            {" · "}
+            <Link href="/privacy" className="underline underline-offset-2">Privacy Policy</Link>
+          </p>
+        </div>
         <div className="mt-9 flex gap-3 flex-wrap">
           <a
             href="https://www.youtube.com/@AlgoThinker"
@@ -207,6 +223,44 @@ export default function LandingPage() {
                     </Button>
                   </Link>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-cyan-200 bg-gradient-to-br from-cyan-50/60 to-white">
+          <CardContent className="pt-7 pb-6 space-y-4">
+            <div className="flex gap-3 items-start">
+              <div className="size-10 rounded-xl grid place-items-center bg-cyan-100 text-cyan-700 border border-cyan-200 shrink-0">
+                <Youtube className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-1.5">
+                  YouTube data use
+                </h3>
+                <ul className="text-[15px] text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
+                  <li>
+                    <strong>View your YouTube account</strong> (youtube.readonly):
+                    shows your channel&apos;s name, subscriber and view counts,
+                    your video list and comments on the Channel dashboard, and
+                    lets you pick one of your videos to promote.
+                  </li>
+                  <li>
+                    <strong>View YouTube Analytics reports</strong> (yt-analytics.readonly):
+                    shows watch time, views and engagement for your videos
+                    next to your campaign results.
+                  </li>
+                  <li>
+                    <strong>Manage your YouTube videos</strong> (youtube.upload):
+                    uploads a video or Short that you select on the Upload page
+                    to your own channel. Nothing is uploaded without you
+                    starting it.
+                  </li>
+                </ul>
+                <p className="text-[15px] text-muted-foreground leading-relaxed mt-2">
+                  YouTube data is fetched live for your own screen and is not
+                  stored on our servers. See the{" "}
+                  <Link href="/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
+                </p>
               </div>
             </div>
           </CardContent>

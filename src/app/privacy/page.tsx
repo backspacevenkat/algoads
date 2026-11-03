@@ -40,27 +40,35 @@ export default function PrivacyPage() {
         <p>We collect only the minimum data needed to run the tool.</p>
         <ul className="list-disc pl-6 space-y-2">
           <li>
-            <strong>Account data:</strong> your email address, display name, and
-            a hashed OAuth subject identifier provided by Google when you sign
-            in with Google.
+            <strong>Account data:</strong> your email address, display name,
+            and, if you sign in with Google, your Google account ID. If you
+            use a password, we store only a salted hash of it.
           </li>
           <li>
-            <strong>Google Ads credentials:</strong> an OAuth 2.0 refresh token
-            and the Google Ads customer ID you authorize. These are stored
-            encrypted at rest and are used only to call the Google Ads API on
-            your explicit behalf.
+            <strong>Google credentials:</strong> the OAuth 2.0 refresh token
+            from your Google Ads and YouTube authorization, and the Google Ads
+            customer ID you choose. These are stored encrypted at rest and are
+            used only to call the Google Ads, YouTube Data and YouTube
+            Analytics APIs on your explicit behalf.
           </li>
           <li>
-            <strong>Campaign references:</strong> IDs, names, creation
-            timestamps, and statuses of the campaigns you create through
-            AlgoAds. Live metrics (impressions, clicks, cost) are queried from
-            the Google Ads API on demand and are not stored in our database.
+            <strong>Campaigns and metrics:</strong> we do not store your
+            campaigns. Campaign names, statuses and metrics (impressions,
+            clicks, cost) are read live from the Google Ads API each time you
+            open the dashboard and are not saved in our database.
           </li>
           <li>
             <strong>Assets you upload:</strong> YouTube video references and
             logo images you add to your ads. These are uploaded to your own
             Google Ads account and deleted from our systems once the ad is
             created.
+          </li>
+          <li>
+            <strong>YouTube data:</strong> not stored on our servers. Channel
+            details, video lists, comments and analytics are requested from
+            YouTube when you open a page and shown only to you. The list of
+            channels you add to the dashboard is kept in your own browser
+            (local storage), not on our servers.
           </li>
           <li>
             <strong>Usage logs:</strong> standard server logs (IP address,
@@ -72,8 +80,8 @@ export default function PrivacyPage() {
 
       <Section title="How we use Google user data">
         <p>
-          Data obtained through your Google Ads OAuth grant is used{" "}
-          <strong>exclusively</strong> to:
+          Data obtained through your Google OAuth grant (Google Ads and
+          YouTube) is used <strong>exclusively</strong> to:
         </p>
         <ul className="list-disc pl-6 space-y-1.5">
           <li>
@@ -85,6 +93,16 @@ export default function PrivacyPage() {
             display in your dashboard.
           </li>
           <li>
+            Show your own YouTube channel statistics, videos, comments and
+            YouTube Analytics reports, and let you pick one of your videos to
+            promote.
+          </li>
+          <li>
+            Upload a video or Short that you select on the Upload page to your
+            own YouTube channel. We never upload, edit or delete videos
+            without you starting the action.
+          </li>
+          <li>
             Maintain an authenticated session so you do not need to re-authorize
             on every visit.
           </li>
@@ -93,8 +111,8 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-6 space-y-1.5">
           <li>Sell, rent, or share your Google user data with third parties.</li>
           <li>
-            Use your Google Ads data to train advertising or machine learning
-            models.
+            Use your Google Ads or YouTube data to train advertising or
+            machine learning models, or to serve you ads.
           </li>
           <li>
             Access customer-level data (conversions, audience members, email
@@ -120,11 +138,74 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section title="YouTube API Services">
+        <p>
+          The Algo Thinker app uses YouTube API Services (the YouTube Data API
+          and the YouTube Analytics API). By connecting your YouTube account you
+          agree to be bound by the{" "}
+          <a
+            href="https://www.youtube.com/t/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-700 hover:text-cyan-600"
+          >
+            YouTube Terms of Service
+          </a>
+          . Google&apos;s handling of your data is described in the{" "}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-700 hover:text-cyan-600"
+          >
+            Google Privacy Policy
+          </a>
+          .
+        </p>
+        <ul className="list-disc pl-6 space-y-1.5">
+          <li>
+            <strong>youtube.readonly</strong> — reads your channel profile,
+            subscriber and view counts, your uploaded videos and their
+            comments, to display them on your Channel dashboard.
+          </li>
+          <li>
+            <strong>yt-analytics.readonly</strong> — reads YouTube Analytics
+            reports (views, watch time, engagement) for your own videos, to
+            display them next to your campaign results.
+          </li>
+          <li>
+            <strong>youtube.upload</strong> — uploads the video file you select,
+            with the title and description you enter, to your own channel. The
+            file is streamed to YouTube and is not kept by us.
+          </li>
+        </ul>
+        <p>
+          We do not store YouTube API data, share it with anyone, or combine it
+          with other users&apos; data. You can revoke the app&apos;s access to
+          your YouTube and Google Ads data at any time from the{" "}
+          <a
+            href="https://security.google.com/settings/security/permissions"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-700 hover:text-cyan-600"
+          >
+            Google security settings page
+          </a>
+          ; revoking immediately stops all access, and the token we hold stops
+          working. To have the token and your account deleted, email
+          privacy@algo-thinker.com.
+        </p>
+      </Section>
+
       <Section title="Third-party services we use">
         <ul className="list-disc pl-6 space-y-1.5">
           <li>
             <strong>Google Ads API &amp; OAuth 2.0</strong> — for campaign
             creation and authentication.
+          </li>
+          <li>
+            <strong>YouTube Data API &amp; YouTube Analytics API</strong> — for
+            your channel dashboard, analytics and video uploads.
           </li>
           <li>
             <strong>Google Gemini API</strong> — for generating ad copy
@@ -149,8 +230,12 @@ export default function PrivacyPage() {
             account is active.
           </li>
           <li>
-            You can revoke AlgoAds&apos; access to your Google Ads account at
-            any time from your{" "}
+            YouTube data is not retained: it is fetched for display and
+            discarded when the request ends.
+          </li>
+          <li>
+            You can revoke the app&apos;s access to your Google Ads and YouTube
+            data at any time from your{" "}
             <a
               href="https://myaccount.google.com/permissions"
               target="_blank"
