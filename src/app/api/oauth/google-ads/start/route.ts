@@ -10,7 +10,8 @@
  */
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getSessionUser } from "@/lib/insforge/server";
+import { getSessionUser } from "@/lib/auth/server";
+import { googleRedirectUri } from "@/lib/auth/google";
 import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -42,15 +43,6 @@ function randomState(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function redirectUri(req: Request): string {
-  // Allow override via env so we don't hardcode the prod URL
-  const override = process.env.GOOGLE_OAUTH_REDIRECT_URI;
-  if (override) return override;
-  // Fall back to the request's own origin (covers localhost dev + preview deploys)
-  const url = new URL(req.url);
-  return `${url.origin}/api/oauth/google-ads/callback`;
-}
-
 export async function GET(req: Request) {
   const session = await getSessionUser();
   if (!session) {
@@ -65,7 +57,7 @@ export async function GET(req: Request) {
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri(req),
+    redirect_uri: googleRedirectUri(req),
     response_type: "code",
     scope: OAUTH_SCOPES,
     // offline + consent is the only way to reliably get a refresh token

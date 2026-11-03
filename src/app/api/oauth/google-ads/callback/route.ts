@@ -4,8 +4,12 @@
  * Receives the authorization code from Google, exchanges it for an access
  * token + refresh token, then calls the Google Ads API's
  * `customers:listAccessibleCustomers` to discover which account the user
- * has access to. Saves the refresh token + customer ID in InsForge so we
- * can call Google Ads on their behalf going forward.
+ * has access to. Saves the refresh token + customer ID in D1 so we can call
+ * Google Ads on their behalf going forward.
+ *
+ * This is also the redirect URI for Google sign-in (the only one registered
+ * on the OAuth client): when the sign-in state cookie matches, the request is
+ * handed to completeGoogleSignIn instead.
  *
  * MVP decisions:
  * - If the user has access to multiple customers, we pick the first one.
@@ -16,8 +20,9 @@
  */
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getSessionUser } from "@/lib/insforge/server";
-import { upsertGoogleAdsConnection } from "@/lib/insforge/db";
+import { getSessionUser } from "@/lib/auth/server";
+import { upsertGoogleAdsConnection } from "@/lib/auth/db";
+import { completeGoogleSignIn, exchangeGoogleCode, SIGNIN_STATE_COOKIE } from "@/lib/auth/google";
 import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +32,6 @@ function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing env var: ${name}`);
   return v;
-}
-
-function redirectUri(req: Request): string {
-  const override = process.env.GOOGLE_OAUTH_REDIRECT_URI;
-  if (override) return override;
-  const url = new URL(req.url);
-  return `${url.origin}/api/oauth/google-ads/callback`;
 }
 
 /** Redirect to /campaigns with an error query param. */
@@ -47,31 +45,7 @@ async function exchangeCodeForTokens(
   code: string,
   req: Request,
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  const clientId = requireEnv("GOOGLE_ADS_CLIENT_ID");
-  const clientKey = requireEnv("GOOGLE_ADS_CLIENT_SECRET");
-
-  const params = new URLSearchParams();
-  params.append("code", code);
-  params.append("client_id", clientId);
-  params.append("client" + "_" + "secret", clientKey); // dodge secret scanner
-  params.append("redirect_uri", redirectUri(req));
-  params.append("grant_type", "authorization_code");
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Token exchange failed ${res.status}: ${body.slice(0, 300)}`);
-  }
-
-  const data = (await res.json()) as {
-    access_token: string;
-    refresh_token?: string;
-  };
+  const data = await exchangeGoogleCode(code, req);
   if (!data.refresh_token) {
     throw new Error(
       "Google did not return a refresh token. Reconnect and approve the consent screen.",
@@ -141,12 +115,22 @@ export async function GET(req: Request) {
   const errorParam = url.searchParams.get("error");
 
   // User denied the consent screen
+  const store = await cookies();
+  const signInState = store.get(SIGNIN_STATE_COOKIE)?.value;
+  const isSignIn = !!state && !!signInState && signInState === state;
+
   if (errorParam) {
     log.warn({
       route: "GET /api/oauth/google-ads/callback",
       event: "consent_denied",
       error: errorParam,
+      sign_in: isSignIn,
     });
+    if (isSignIn) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("error", errorParam);
+      return NextResponse.redirect(loginUrl);
+    }
     return failRedirect(req, errorParam);
   }
 
@@ -154,8 +138,12 @@ export async function GET(req: Request) {
     return failRedirect(req, "missing_code_or_state");
   }
 
+  // Google sign-in shares this redirect URI; its own state cookie is the CSRF check.
+  if (isSignIn) {
+    return completeGoogleSignIn(req, code, store);
+  }
+
   // Validate the state cookie matches (CSRF check)
-  const store = await cookies();
   const expectedState = store.get("google_oauth_state")?.value;
   if (!expectedState || expectedState !== state) {
     log.warn({
@@ -185,7 +173,7 @@ export async function GET(req: Request) {
 
     const accountName = await fetchCustomerName(accessToken, customerId);
 
-    await upsertGoogleAdsConnection(session.accessToken, session.user.id, {
+    await upsertGoogleAdsConnection(session.user.id, {
       refresh_token: refreshToken,
       customer_id: customerId,
       login_customer_id: null,

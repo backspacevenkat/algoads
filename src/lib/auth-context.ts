@@ -2,7 +2,7 @@
  * Unified auth context for API routes and server components.
  *
  * Handles:
- *   1. Fetching the current InsForge user from cookies
+ *   1. Fetching the current user from the session cookie (D1)
  *   2. Looking up their Google Ads connection (if any)
  *   3. Assembling the full GoogleAdsCredentials bundle
  *
@@ -13,16 +13,15 @@
  *   const data = await listCampaigns(auth.googleAdsCreds);
  */
 import { NextResponse } from "next/server";
-import { getSessionUser } from "./insforge/server";
-import type { InsForgeUser } from "./insforge/server";
-import { getUserGoogleAdsConnection } from "./insforge/db";
-import type { GoogleAdsConnection } from "./insforge/db";
+import { getSessionUser } from "./auth/server";
+import type { AppUser } from "./auth/server";
+import { getUserGoogleAdsConnection } from "./auth/db";
+import type { GoogleAdsConnection } from "./auth/db";
 import { credentialsForUser } from "./google-ads/client";
 import type { GoogleAdsCredentials } from "./google-ads/client";
 
 export interface AuthContext {
-  user: InsForgeUser | null;
-  accessToken: string | null;
+  user: AppUser | null;
   connection: GoogleAdsConnection | null;
   googleAdsCreds: GoogleAdsCredentials | null;
 }
@@ -30,13 +29,13 @@ export interface AuthContext {
 export async function getAuthContext(): Promise<AuthContext> {
   const session = await getSessionUser();
   if (!session) {
-    return { user: null, accessToken: null, connection: null, googleAdsCreds: null };
+    return { user: null, connection: null, googleAdsCreds: null };
   }
-  const { user, accessToken } = session;
+  const { user } = session;
 
   let connection: GoogleAdsConnection | null = null;
   try {
-    connection = await getUserGoogleAdsConnection(accessToken);
+    connection = await getUserGoogleAdsConnection(user.id);
   } catch {
     // Table may not exist yet, or network hiccup — degrade gracefully
     connection = null;
@@ -44,7 +43,7 @@ export async function getAuthContext(): Promise<AuthContext> {
 
   const googleAdsCreds = connection ? credentialsForUser(connection) : null;
 
-  return { user, accessToken, connection, googleAdsCreds };
+  return { user, connection, googleAdsCreds };
 }
 
 /** Standard 401 response for API routes. */

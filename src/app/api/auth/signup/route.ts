@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { signUp, setSessionCookies, InsForgeAuthError } from "@/lib/insforge/server";
+import { signUp, setSessionCookies, AuthError } from "@/lib/auth/server";
 import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       error: e instanceof Error ? e.message : String(e),
       ms: Date.now() - start,
     });
-    if (e instanceof InsForgeAuthError) {
+    if (e instanceof AuthError) {
       return NextResponse.json(
         { error: "signup_failed", message: e.message },
         { status: e.status || 400 },

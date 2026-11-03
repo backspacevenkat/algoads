@@ -6,6 +6,7 @@ import {
   generateCreativeWithGemini,
 } from "@/lib/gemini/generate-creative";
 import { log } from "@/lib/logger";
+import { getAuthContext, unauthorizedResponse } from "@/lib/auth-context";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,6 +18,9 @@ const inputSchema = z.object({
 
 export async function POST(req: Request) {
   const start = Date.now();
+  // Gemini calls cost money: check the session here, not only at the edge.
+  const auth = await getAuthContext();
+  if (!auth.user) return unauthorizedResponse();
   try {
     const body = await req.json();
     const parsed = inputSchema.safeParse(body);

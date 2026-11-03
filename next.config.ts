@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
   // Silence the "multiple lockfiles detected" warning by pinning the workspace
@@ -23,3 +24,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// Gives `next dev` the Cloudflare bindings (D1) from wrangler.jsonc.
+initOpenNextCloudflareForDev();

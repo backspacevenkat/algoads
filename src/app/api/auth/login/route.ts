@@ -4,8 +4,8 @@ import { z } from "zod";
 import {
   signInWithPassword,
   setSessionCookies,
-  InsForgeAuthError,
-} from "@/lib/insforge/server";
+  AuthError,
+} from "@/lib/auth/server";
 import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       error: e instanceof Error ? e.message : String(e),
       ms: Date.now() - start,
     });
-    if (e instanceof InsForgeAuthError) {
+    if (e instanceof AuthError) {
       return NextResponse.json(
         { error: "login_failed", message: "Invalid email or password" },
         { status: e.status === 401 ? 401 : 400 },

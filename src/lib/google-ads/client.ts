@@ -4,7 +4,7 @@
  * Previously this module read credentials from process.env, which worked for
  * a single-tenant personal tool. Now AlgoAds is multi-tenant: each user
  * connects their OWN Google Ads account via OAuth, and we store their
- * refresh token in InsForge (see lib/insforge/db.ts). The developer token
+ * refresh token in D1 (see lib/auth/db.ts). The developer token
  * and OAuth client credentials are still app-level (ours).
  *
  * Every public function takes a `GoogleAdsCredentials` object as its first
@@ -19,7 +19,7 @@ const BASE_URL = `https://googleads.googleapis.com/${API_VERSION}`;
 /**
  * Per-call credentials bundle.
  * - clientId / clientKey / developerToken: app-level, ours
- * - refreshToken / customerId: per-user, from InsForge
+ * - refreshToken / customerId: per-user, from D1
  */
 export interface GoogleAdsCredentials {
   clientId: string;

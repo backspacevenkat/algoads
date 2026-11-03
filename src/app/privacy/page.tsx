@@ -15,7 +15,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-muted-foreground">
-          Effective date: 2026-04-16 · Last updated: 2026-04-16
+          Effective date: 2026-04-16 · Last updated: 2026-11-03
         </p>
       </header>
 
@@ -133,13 +133,11 @@ export default function PrivacyPage() {
             account&apos;s personal data.
           </li>
           <li>
-            <strong>Vercel</strong> — our hosting provider. Standard request
-            logs are retained by Vercel under their own privacy terms.
-          </li>
-          <li>
-            <strong>InsForge</strong> — our backend authentication and database
-            platform. Data stored there is encrypted at rest and access is
-            restricted to the AlgoAds server process.
+            <strong>Cloudflare</strong> — our hosting, authentication and
+            database provider (Workers and D1). Data stored there is encrypted
+            at rest and access is restricted to the AlgoAds server process.
+            Standard request logs are retained by Cloudflare under their own
+            privacy terms.
           </li>
         </ul>
       </Section>

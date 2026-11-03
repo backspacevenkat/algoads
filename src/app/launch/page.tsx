@@ -1,10 +1,17 @@
+import { redirect } from "next/navigation";
+import { getAuthContext } from "@/lib/auth-context";
 import { LaunchFlow } from "./launch-flow";
 
 export const metadata = {
   title: "Launch campaign — AlgoAds",
 };
 
-export default function LaunchPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LaunchPage() {
+  const auth = await getAuthContext();
+  if (!auth.user) redirect("/login?next=/launch");
+
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>

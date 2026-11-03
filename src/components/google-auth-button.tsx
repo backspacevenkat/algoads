@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * "Continue with Google" button. Links directly to our /api/auth/google-start
- * route which handles the InsForge PKCE flow and eventually redirects to
+ * route, which sends the user to Google and eventually redirects to
  * either /campaigns or the `next` query param.
  */
 export function GoogleAuthButton({

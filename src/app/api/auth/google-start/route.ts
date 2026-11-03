@@ -1,25 +1,17 @@
 /**
  * Google sign-in / sign-up — step 1.
  *
- * Uses InsForge's built-in Google OAuth with PKCE. We generate a code
- * verifier + challenge, store the verifier in a short-lived httpOnly
- * cookie, and redirect the user to Google via InsForge's initiate
- * endpoint.
+ * Sends the user to Google's consent screen with `openid email profile`
+ * scopes only — just enough to identify them. Google returns to the shared
+ * callback (`/api/oauth/google-ads/callback`), which sees our state cookie
+ * and finishes the sign-in in lib/auth/google.ts.
  *
- * After the user signs in at Google, InsForge handles the provider
- * callback internally and redirects the browser back to our
- * /api/auth/google-callback endpoint with `?insforge_code=...`. The
- * callback route reads the cookie + query param and exchanges them for
- * a session.
- *
- * This flow grants only `openid email profile` scopes — just enough to
- * identify the user. To additionally grant Google Ads access, the user
- * clicks "Connect Google Ads" on the dashboard after signing in (that's
- * a separate OAuth flow we already built).
+ * Google Ads access is a separate grant: the user clicks "Connect Google
+ * Ads" on the dashboard after signing in.
  */
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { initiateOAuth, generatePkcePair } from "@/lib/insforge/server";
+import { googleSignInUrl, SIGNIN_NEXT_COOKIE, SIGNIN_STATE_COOKIE } from "@/lib/auth/google";
 import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +21,12 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const next = url.searchParams.get("next") ?? "/campaigns";
 
-    const { verifier, challenge } = await generatePkcePair();
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const state = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 
-    const redirectUri = `${url.origin}/api/auth/google-callback`;
-    const authUrl = await initiateOAuth("google", redirectUri, challenge);
-
-    // Store the verifier AND the post-auth destination in httpOnly cookies
-    // so the callback can complete the exchange and send the user where
-    // they wanted to go.
+    // State (CSRF check) and the post-auth destination live in short-lived
+    // httpOnly cookies until Google sends the user back.
     const store = await cookies();
     const cookieOpts = {
       httpOnly: true,
@@ -45,30 +35,19 @@ export async function GET(req: Request) {
       path: "/",
       maxAge: 600, // 10 minutes
     };
-    store.set("insforge_pkce_verifier", verifier, cookieOpts);
-    store.set("insforge_oauth_next", next, cookieOpts);
+    store.set(SIGNIN_STATE_COOKIE, state, cookieOpts);
+    store.set(SIGNIN_NEXT_COOKIE, next, cookieOpts);
 
-    log.info({
-      route: "GET /api/auth/google-start",
-      event: "oauth_start",
-      provider: "google",
-      next,
-    });
-
-    return NextResponse.redirect(authUrl);
+    log.info({ route: "GET /api/auth/google-start", event: "oauth_start", provider: "google", next });
+    return NextResponse.redirect(googleSignInUrl(req, state));
   } catch (e) {
     log.error({
       route: "GET /api/auth/google-start",
       event: "oauth_start_failed",
       error: e instanceof Error ? e.message : String(e),
     });
-    // Bounce back to /login with error query
-    const url = new URL(req.url);
-    const loginUrl = new URL("/login", url.origin);
-    loginUrl.searchParams.set(
-      "error",
-      e instanceof Error ? e.message : "oauth_init_failed",
-    );
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("error", "oauth_init_failed");
     return NextResponse.redirect(loginUrl);
   }
 }

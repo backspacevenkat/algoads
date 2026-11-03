@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "algoads",
+  "main": "worker.ts",
+  "account_id": "b6e431054803419f2bb81b6ae8b0cc7a",
+  "compatibility_date": "2026-10-28",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "upload_source_maps": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "algoads",
+      "database_id": "16c90602-ea54-4fb0-8100-1494a0be4f3e",
+      "migrations_dir": "migrations"
+    }
+  ]
+  // Secrets (wrangler secret put): GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET,
+  // GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_REFRESH_TOKEN, GOOGLE_ADS_CUSTOMER_ID,
+  // GOOGLE_AI_API_KEY, GOOGLE_OAUTH_REDIRECT_URI.
+}

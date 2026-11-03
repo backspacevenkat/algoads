@@ -57,3 +57,8 @@ next-env.d.ts
 .trae
 .windsurf
 skills-lock.json
+
+# cloudflare
+/.open-next/
+/.wrangler/
+.dev.vars*
