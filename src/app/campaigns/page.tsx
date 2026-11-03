@@ -124,6 +124,13 @@ export default async function DashboardPage() {
         <Alert variant="destructive">
           <AlertTitle>Could not load campaigns</AlertTitle>
           <AlertDescription className="font-mono text-xs">{data.error}</AlertDescription>
+          {/* Google revoked the stored refresh token (expired, revoked, or the
+              password changed): the only fix is a fresh consent. */}
+          {data.error.includes("invalid_grant") && (
+            <Link href="/api/oauth/google-ads/start" className="mt-3 inline-block">
+              <Button size="sm">Reconnect Google Ads</Button>
+            </Link>
+          )}
         </Alert>
       )}
 
