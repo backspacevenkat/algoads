@@ -10,6 +10,10 @@
     "binding": "ASSETS"
   },
   "workers_dev": true,
+  "routes": [
+    { "pattern": "algo-thinker.com", "custom_domain": true },
+    { "pattern": "www.algo-thinker.com", "custom_domain": true }
+  ],
   "upload_source_maps": true,
   "observability": { "enabled": true },
   "d1_databases": [
